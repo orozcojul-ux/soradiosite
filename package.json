@@ -1,3 +1,4 @@
+
 {
   "name": "readdy-site",
   "version": "0.1.0",
@@ -18,6 +19,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.16",
     "eslint": "^8",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
