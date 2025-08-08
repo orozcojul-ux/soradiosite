@@ -1,6 +1,8 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Pacifico } from "next/font/google";
 import "./globals.css";
+import ClientLayout from './ClientLayout';
 
 const pacifico = Pacifico({
   weight: '400',
@@ -30,12 +32,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
+    <html lang="fr">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${pacifico.variable} antialiased`}
       >
-        {children}
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
-  );
+  )
 }
