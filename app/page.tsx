@@ -3,9 +3,18 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import AuthModal from '@/components/AuthModal';
+import UserMenu from '@/components/UserMenu';
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    mode: 'login' | 'signup';
+  }>({
+    isOpen: false,
+    mode: 'login',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -18,7 +27,7 @@ export default function Home() {
                 <i className="ri-radio-line text-white text-xl"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-['Pacifico'] text-white">SORadio</h1>
+                <h1 className="text-2xl font-[`Pacifico`] text-white">SORadio</h1>
                 <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
               </div>
             </div>
@@ -29,6 +38,23 @@ export default function Home() {
               <Link href="/equipe" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Équipe</Link>
               <Link href="/contact" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Contact</Link>
             </nav>
+            <div className="flex items-center space-x-4">
+              <UserMenu />
+              <div className="hidden md:flex items-center space-x-3">
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="text-white hover:text-orange-400 transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  Connexion
+                </button>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'signup' })}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full font-semibold hover:scale-105 transition-transform cursor-pointer whitespace-nowrap"
+                >
+                  Inscription
+                </button>
+              </div>
+            </div>
             <button className="md:hidden text-white">
               <i className="ri-menu-line text-2xl"></i>
             </button>
@@ -38,15 +64,15 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('https://readdy.ai/api/search-image?query=Modern%20radio%20studio%20with%20professional%20microphones%2C%20mixing%20console%2C%20neon%20lights%2C%20urban%20cityscape%20visible%20through%20window%2C%20purple%20and%20orange%20ambient%20lighting%2C%20high-tech%20broadcast%20equipment%2C%20contemporary%20design%2C%20professional%20radio%20broadcasting%20environment%20with%20Bordeaux%20city%20skyline%20in%20background&width=1920&height=1080&seq=hero-radio-studio&orientation=landscape')`
+            backgroundImage: `url('https://readdy.ai/api/search-image?query=Modern%20radio%20studio%20with%20professional%20microphones%2C%20mixing%20console%2C%20neon%20lights%2C%20urban%20cityscape%20visible%20through%20window%2C%20purple%20and%20orange%20ambient%20lighting%2C%20high-tech%20broadcast%20equipment%2C%20contemporary%20design%2C%20professional%20radio%20broadcasting%20environment%20with%20Bordeaux%20city%20skyline%20in%20background&width=1920&height=1080&seq=hero-radio-studio&orientation=landscape')`,
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-transparent"></div>
         </div>
-        
+
         <div className="relative z-10 container mx-auto px-6 text-center">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
@@ -55,11 +81,11 @@ export default function Home() {
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto">
               La voix du Sud-Ouest qui résonne dans le cœur de Bordeaux. Découvrez nos programmes, nos podcasts et notre équipe passionnée.
             </p>
-            
+
             {/* Player Controls */}
             <div className="bg-black/40 backdrop-blur-md rounded-2xl p-8 max-w-md mx-auto mb-8 border border-white/10">
               <div className="flex items-center justify-center space-x-6">
-                <button 
+                <button
                   onClick={() => setIsPlaying(!isPlaying)}
                   className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
                 >
@@ -73,10 +99,10 @@ export default function Home() {
               {isPlaying && (
                 <div className="mt-4 flex items-center justify-center space-x-1">
                   <div className="w-1 h-4 bg-orange-500 rounded animate-pulse"></div>
-                  <div className="w-1 h-6 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-1 h-3 bg-orange-500 rounded animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                  <div className="w-1 h-5 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.3s'}}></div>
-                  <div className="w-1 h-2 bg-orange-500 rounded animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                  <div className="w-1 h-6 bg-red-500 rounded animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-1 h-3 bg-orange-500 rounded animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1 h-5 bg-red-500 rounded animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                  <div className="w-1 h-2 bg-orange-500 rounded animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               )}
             </div>
@@ -94,7 +120,7 @@ export default function Home() {
 
         {/* Floating Elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-32 h-32 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-20 right-10 w-32 h-32 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </section>
 
       {/* Programs Section */}
@@ -161,10 +187,10 @@ export default function Home() {
               </div>
             </div>
             <div className="relative">
-              <img 
+              <img
                 src="https://readdy.ai/api/search-image?query=Professional%20radio%20studio%20in%20Bordeaux%20with%20modern%20broadcasting%20equipment%2C%20microphones%2C%20mixing%20console%2C%20city%20view%20through%20windows%2C%20warm%20lighting%2C%20contemporary%20design%2C%20radio%20host%20working%2C%20professional%20broadcast%20environment%20with%20French%20radio%20aesthetic&width=600&height=400&seq=about-studio&orientation=landscape"
                 alt="Studio SORadio"
-                className="rounded-2xl shadow-2xl object-cover w-full h-80"
+                className="rounded-2xl shadow-2xl object-cover w-full h-80 object-top"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-2xl"></div>
             </div>
@@ -208,7 +234,7 @@ export default function Home() {
                   <i className="ri-radio-line text-white"></i>
                 </div>
                 <div>
-                  <h3 className="text-xl font-['Pacifico'] text-white">SORadio</h3>
+                  <h3 className="text-xl font-[`Pacifico`] text-white">SORadio</h3>
                   <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
                 </div>
               </div>
@@ -254,6 +280,13 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={() => setAuthModal({ ...authModal, isOpen: false })}
+        mode={authModal.mode}
+      />
     </div>
   );
 }
