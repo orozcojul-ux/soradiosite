@@ -1,11 +1,14 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import ChatWidget from '@/components/ChatWidget';
+import ChatWidget from '../../components/ChatWidget';
+import { supabase } from '../../lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 export default function PlaylistPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [selectedGenre, setSelectedGenre] = useState('tous');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
@@ -114,9 +117,29 @@ export default function PlaylistPage() {
     ? playlists 
     : playlists.filter(playlist => playlist.genre === selectedGenre);
 
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthRequest = () => {
+    window.location.href = '/';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
+    <div className="min-h-screen bg-white">
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -129,7 +152,7 @@ export default function PlaylistPage() {
                 <p className="text-orange-500 text-sm">Playlists</p>
               </div>
             </Link>
-            
+
             <nav className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Accueil
@@ -198,7 +221,6 @@ export default function PlaylistPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-green-500 to-teal-600">
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-5xl font-bold text-white mb-6">Nos Playlists</h1>
@@ -208,7 +230,6 @@ export default function PlaylistPage() {
         </div>
       </section>
 
-      {/* Player En Direct */}
       <section className="py-8 bg-white border-b border-gray-200">
         <div className="container mx-auto px-6">
           <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-200">
@@ -226,7 +247,7 @@ export default function PlaylistPage() {
                   <p className="text-gray-500 text-sm">105.7 MHz • soradio.fr</p>
                 </div>
               </div>
-              
+
               {isPlaying && (
                 <div className="flex items-center space-x-1">
                   {[...Array(12)].map((_, i) => (
@@ -247,7 +268,6 @@ export default function PlaylistPage() {
         </div>
       </section>
 
-      {/* Filtres par Genre */}
       <section className="py-8 bg-white">
         <div className="container mx-auto px-6">
           <div className="flex justify-center">
@@ -273,7 +293,6 @@ export default function PlaylistPage() {
         </div>
       </section>
 
-      {/* Playlists Grid */}
       <section className="py-16">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -287,13 +306,13 @@ export default function PlaylistPage() {
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  
+
                   <div className="absolute top-4 left-4">
                     <div className={`bg-gradient-to-r ${playlist.color} text-white px-3 py-1 rounded-full text-sm font-medium`}>
                       {playlist.tracks} titres
                     </div>
                   </div>
-                  
+
                   <div className="absolute bottom-4 left-4 right-4">
                     <button className="w-full bg-white/90 backdrop-blur-sm text-gray-800 py-3 rounded-xl font-semibold hover:bg-white transition-colors cursor-pointer">
                       <i className="ri-play-fill mr-2"></i>
@@ -301,7 +320,7 @@ export default function PlaylistPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xl font-bold text-gray-800">{playlist.name}</h3>
@@ -310,7 +329,7 @@ export default function PlaylistPage() {
                       {playlist.duration}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600 capitalize">{playlist.genre}</span>
                     <div className="flex space-x-2">
@@ -332,7 +351,6 @@ export default function PlaylistPage() {
         </div>
       </section>
 
-      {/* Top des Titres */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
@@ -348,7 +366,7 @@ export default function PlaylistPage() {
                     <div className="text-2xl font-bold text-orange-500 w-8">
                       #{index + 1}
                     </div>
-                    
+
                     <button 
                       onClick={() => {
                         setCurrentTrack(index);
@@ -358,16 +376,16 @@ export default function PlaylistPage() {
                     >
                       <i className={`${index === currentTrack && isPlaying ? 'ri-pause-fill' : 'ri-play-fill'} text-white`}></i>
                     </button>
-                    
+
                     <div className="flex-1">
                       <h3 className="font-bold text-gray-800">{track.title}</h3>
                       <p className="text-gray-600">{track.artist} • {track.album}</p>
                     </div>
-                    
+
                     <div className="text-gray-500 text-sm">
                       {track.duration}
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <button className="w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-orange-50 transition-colors cursor-pointer shadow-sm">
                         <i className="ri-heart-line text-gray-600"></i>
@@ -384,27 +402,32 @@ export default function PlaylistPage() {
         </div>
       </section>
 
-      {/* Créer sa Playlist */}
-      <section className="py-16 bg-gradient-to-r from-green-500 to-teal-600">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Créez Votre Playlist</h2>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Personnalisez votre expérience musicale et partagez vos découvertes
+      <section className="py-20 bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">
+            Rejoignez Notre Communauté Audio
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Découvrez de nouveaux contenus, partagez vos favoris et connectez-vous avec des passionnés d'audio
           </p>
-          <div className="flex items-center justify-center space-x-4 flex-wrap gap-4">
-            <button className="bg-white text-green-600 px-8 py-4 rounded-xl font-bold hover:bg-gray-100 transition-colors cursor-pointer whitespace-nowrap flex items-center space-x-2">
-              <i className="ri-add-circle-line"></i>
-              <span>Créer une Playlist</span>
-            </button>
-            <button className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold hover:bg-white hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap flex items-center space-x-2">
-              <i className="ri-music-2-line"></i>
-              <span>Découvrir Plus</span>
-            </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/profile" 
+              className="bg-purple-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Créer un Compte
+            </Link>
+            <Link 
+              href="/contact" 
+              className="border-2 border-purple-600 text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Nous Contacter
+            </Link>
           </div>
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
