@@ -1,12 +1,35 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import ChatWidget from '@/components/ChatWidget';
 
 export default function ProgrammesPage() {
   const [selectedDay, setSelectedDay] = useState('lundi');
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthRequest = () => {
+    window.location.href = '/';
+  };
 
   const programmes = {
     lundi: [
@@ -58,11 +81,11 @@ export default function ProgrammesPage() {
                 <i className="ri-radio-line text-white"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-['Pacifico'] text-gray-800">SORadio</h1>
+                <h1 className="text-2xl font-[\'Pacifico\'] text-gray-800">SORadio</h1>
                 <p className="text-orange-500 text-sm">Programmes</p>
               </div>
             </Link>
-            
+
             <nav className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Accueil
@@ -172,7 +195,7 @@ export default function ProgrammesPage() {
           <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center capitalize">
             Programme du {selectedDay}
           </h2>
-          
+
           <div className="max-w-4xl mx-auto space-y-4">
             {(programmes[selectedDay as keyof typeof programmes] || programmes.lundi).map((slot, index) => (
               <div key={index} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
@@ -180,7 +203,7 @@ export default function ProgrammesPage() {
                   <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl font-bold text-lg min-w-0 flex-shrink-0">
                     {slot.time}
                   </div>
-                  
+
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">{slot.show}</h3>
                     <div className="flex items-center space-x-2 mb-3">
@@ -191,7 +214,7 @@ export default function ProgrammesPage() {
                     </div>
                     <p className="text-gray-600 leading-relaxed">{slot.description}</p>
                   </div>
-                  
+
                   <div className="flex space-x-2 flex-shrink-0">
                     <button className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center hover:bg-orange-200 transition-colors cursor-pointer">
                       <i className="ri-heart-line text-orange-600"></i>
@@ -207,7 +230,7 @@ export default function ProgrammesPage() {
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
