@@ -77,45 +77,18 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
         }
 
         if (authData.user) {
-          // Créer le profil directement sans vérification préalable
-          // Utiliser upsert pour éviter les conflits de clé unique
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              email: email.trim().toLowerCase(),
-              full_name: fullName.trim(),
-              is_admin: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id'
-            })
-            .select()
-            .single();
-
-          if (profileError) {
-            console.error('Erreur profil:', profileError);
-            setMessage('Erreur lors de la création du profil: ' + profileError.message);
+          setMessage('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+          
+          setTimeout(() => {
+            setCurrentMode('login');
+            setPassword('');
+            setMessage('');
             setLoading(false);
-            return;
-          }
-
-          // Succès
-          if (profileData) {
-            localStorage.setItem('user_session', JSON.stringify(profileData));
-            setMessage('Compte créé avec succès !');
-
-            setTimeout(() => {
-              setLoading(false);
-              onClose();
-              window.location.reload();
-            }, 1500);
-          }
+          }, 2000);
         }
 
       } else {
-        // CONNEXION avec Supabase
+        // CONNEXION avec Supabase - Méthode simplifiée
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password: password
@@ -123,29 +96,18 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
 
         if (authError) {
           console.error('Erreur connexion:', authError);
-          setMessage('Email ou mot de passe incorrect');
+          if (authError.message.includes('Invalid login credentials')) {
+            setMessage('Email ou mot de passe incorrect');
+          } else if (authError.message.includes('Email not confirmed')) {
+            setMessage('Veuillez confirmer votre email avant de vous connecter');
+          } else {
+            setMessage('Erreur de connexion: ' + authError.message);
+          }
           setLoading(false);
           return;
         }
 
-        if (authData.user) {
-          // Récupérer le profil complet
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authData.user.id)
-            .single();
-
-          if (profileError || !profileData) {
-            console.error('Erreur récupération profil:', profileError);
-            setMessage('Erreur lors de la récupération du profil');
-            setLoading(false);
-            return;
-          }
-
-          // Sauvegarder la session localement
-          localStorage.setItem('user_session', JSON.stringify(profileData));
-
+        if (authData.user && authData.session) {
           setMessage('Connexion réussie !');
 
           setTimeout(() => {
