@@ -1,13 +1,36 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import ChatWidget from '@/components/ChatWidget';
 
 export default function EvenementsPage() {
   const [selectedMonth, setSelectedMonth] = useState('janvier');
   const [viewMode, setViewMode] = useState('grid');
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthRequest = () => {
+    window.location.href = '/';
+  };
 
   const evenements = {
     janvier: [
@@ -261,7 +284,7 @@ export default function EvenementsPage() {
                 <div className="relative">
                   <div className="h-64 overflow-hidden">
                     <img
-                      src={`https://readdy.ai/api/search-image?query=$%7Bevent.image%7D&width=600&height=400&seq=event-${event.id}&orientation=landscape`}
+                      src={`https://readdy.ai/api/search-image?query=${event.image}&width=600&height=400&seq=event-${event.id}&orientation=landscape`}
                       alt={event.title}
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                     />
@@ -339,7 +362,7 @@ export default function EvenementsPage() {
                   <div className="relative">
                     <div className="h-48 overflow-hidden">
                       <img
-                        src={`https://readdy.ai/api/search-image?query=$%7Bevent.image%7D&width=400&height=300&seq=event-grid-${event.id}&orientation=landscape`}
+                        src={`https://readdy.ai/api/search-image?query=${event.image}&width=400&height=300&seq=event-grid-${event.id}&orientation=landscape`}
                         alt={event.title}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                       />
@@ -391,7 +414,7 @@ export default function EvenementsPage() {
                   <div className="flex items-start space-x-6">
                     <div className="w-32 h-32 rounded-xl overflow-hidden flex-shrink-0">
                       <img
-                        src={`https://readdy.ai/api/search-image?query=$%7Bevent.image%7D&width=200&height=200&seq=event-list-${event.id}&orientation=squarish`}
+                        src={`https://readdy.ai/api/search-image?query=${event.image}&width=200&height=200&seq=event-list-${event.id}&orientation=squarish`}
                         alt={event.title}
                         className="w-full h-full object-cover object-top"
                       />
@@ -479,7 +502,7 @@ export default function EvenementsPage() {
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
