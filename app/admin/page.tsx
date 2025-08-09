@@ -108,55 +108,55 @@ export default function AdminPage() {
   });
 
   const roleColors = {
-    admin: { 
-      bg: 'bg-red-50 border-red-200', 
-      text: 'text-red-700', 
+    admin: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-700',
       badge: 'bg-red-500 text-white',
       icon: 'ri-shield-star-line',
       label: 'Admin'
     },
-    journaliste: { 
-      bg: 'bg-blue-50 border-blue-200', 
-      text: 'text-blue-700', 
+    journaliste: {
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-700',
       badge: 'bg-blue-500 text-white',
       icon: 'ri-mic-line',
       label: 'Journaliste'
     },
-    moderateur: { 
-      bg: 'bg-green-50 border-green-200', 
-      text: 'text-green-700', 
+    moderateur: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-700',
       badge: 'bg-green-500 text-white',
       icon: 'ri-shield-check-line',
       label: 'Modérateur'
     },
-    animateur: { 
-      bg: 'bg-purple-50 border-purple-200', 
-      text: 'text-purple-700', 
+    animateur: {
+      bg: 'bg-purple-50 border-purple-200',
+      text: 'text-purple-700',
       badge: 'bg-purple-500 text-white',
       icon: 'ri-radio-line',
       label: 'Animateur'
     },
-    vip: { 
-      bg: 'bg-yellow-50 border-orange-200', 
-      text: 'text-orange-700', 
+    vip: {
+      bg: 'bg-yellow-50 border-orange-200',
+      text: 'text-orange-700',
       badge: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white',
       icon: 'ri-star-line',
       label: 'VIP'
     },
-    auditeur: { 
-      bg: 'bg-gray-50 border-gray-200', 
-      text: 'text-gray-700', 
+    auditeur: {
+      bg: 'bg-gray-50 border-gray-200',
+      text: 'text-gray-700',
       badge: 'bg-gray-500 text-white',
       icon: 'ri-user-line',
       label: 'Auditeur'
     }
   };
 
-  const [moderationAction, setModerationAction] = useState({ 
-    type: '', 
-    userId: '', 
-    reason: '', 
-    duration: '1' 
+  const [moderationAction, setModerationAction] = useState({
+    type: '',
+    userId: '',
+    reason: '',
+    duration: '1'
   });
   const [showModerationModal, setShowModerationModal] = useState(false);
 
@@ -200,8 +200,8 @@ export default function AdminPage() {
       setProfile(profileData);
 
       await Promise.all([
-        loadAllUsers(), 
-        loadSettings(), 
+        loadAllUsers(),
+        loadSettings(),
         loadChatMessages(),
         loadAnalytics()
       ]);
@@ -293,7 +293,7 @@ export default function AdminPage() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           role: newRole,
           updated_at: new Date().toISOString()
         })
@@ -381,12 +381,12 @@ export default function AdminPage() {
       const newMaintenanceMode = !settings.system.maintenanceMode;
       await toggleMaintenanceMode(newMaintenanceMode);
 
-      setSettings(prev => ({ 
-        ...prev, 
-        system: { 
-          ...prev.system, 
-          maintenanceMode: newMaintenanceMode 
-        } 
+      setSettings(prev => ({
+        ...prev,
+        system: {
+          ...prev.system,
+          maintenanceMode: newMaintenanceMode
+        }
       }));
       setStreamStatus(newMaintenanceMode ? 'maintenance' : 'live');
 
@@ -407,7 +407,7 @@ export default function AdminPage() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           is_admin: !currentStatus,
           updated_at: new Date().toISOString()
         })
@@ -570,11 +570,7 @@ export default function AdminPage() {
           user_name: 'Système',
           user_email: 'system@soradio.com',
           user_role: 'admin',
-          message: `🛡️ ${userToModerate.full_name || userToModerate.email} a été ${ 
-            action === 'ban' ? 'banni(e)' : 
-            action === 'mute' ? `mis(e) en silence ${duration ? `pour ${duration}h` : ''}` : 
-            'averti(e)'
-          }. Raison: ${reason}${action === 'warn' && updateData.warnings_count >= 3 ? ' (Auto-mute 24h après 3 avertissements)' : ''}`
+          message: `🛡️ ${userToModerate.full_name || userToModerate.email} a été ${action === 'ban' ? 'banni(e)' : action === 'mute' ? `mis(e) en silence ${duration ? `pour ${duration}h` : ''}` : 'averti(e)'}. Raison: ${reason}${action === 'warn' && updateData.warnings_count >= 3 ? ' (Auto-mute 24h après 3 avertissements)' : ''}`
         });
 
       await Promise.all([loadAllUsers(), loadChatMessages()]);
@@ -632,10 +628,7 @@ export default function AdminPage() {
           user_name: 'Système',
           user_email: 'system@soradio.com',
           user_role: 'admin',
-          message: `🔓 ${userToUnmoderate.full_name || userToUnmoderate.email} a été ${ 
-            action === 'unban' ? 'débanni(e)' : 
-            'remis(e) en liberté de parole'
-          }`
+          message: `🔓 ${userToUnmoderate.full_name || userToUnmoderate.email} a été ${action === 'unban' ? 'débanni(e)' : 'remis(e) en liberté de parole'}`
         });
 
       await Promise.all([loadAllUsers(), loadChatMessages()]);
@@ -659,7 +652,7 @@ export default function AdminPage() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           warnings_count: 0,
           updated_at: new Date().toISOString()
         })
@@ -677,6 +670,11 @@ export default function AdminPage() {
     } finally {
       setProcessing('');
     }
+  };
+
+  const handleAuthRequest = () => {
+    // Rediriger vers la page d'accueil pour se connecter
+    window.location.href = '/';
   };
 
   if (loading) {
@@ -707,17 +705,16 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
 
       {(message || processing) && (
         <div className="fixed top-4 right-4 z-40 max-w-md">
           <div
-            className={`p-4 rounded-lg backdrop-blur-md border ${ 
-              message.includes('succès') || message.includes('✅') 
-                ? 'bg-green-500/90 text-white border-green-400' 
-                : message.includes('Erreur') || message.includes('❌') 
-                ? 'bg-red-500/90 text-white border-red-400' 
-                : 'bg-blue-500/90 text-white border-blue-400' 
+            className={`p-4 rounded-lg backdrop-blur-md border ${message.includes('succès') || message.includes('✅')
+              ? 'bg-green-500/90 text-white border-green-400'
+              : message.includes('Erreur') || message.includes('❌')
+              ? 'bg-red-500/90 text-white border-red-400'
+              : 'bg-blue-500/90 text-white border-blue-400'
             }`}
           >
             {processing ? (
@@ -763,10 +760,9 @@ export default function AdminPage() {
               <nav className="space-y-2">
                 <button
                   onClick={() => setActiveTab('dashboard')}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${ 
-                    activeTab === 'dashboard' 
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' 
-                      : 'text-gray-700 hover:bg-gray-100' 
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${activeTab === 'dashboard'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <i className="ri-dashboard-line"></i>
@@ -775,10 +771,9 @@ export default function AdminPage() {
 
                 <button
                   onClick={() => setActiveTab('users')}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${ 
-                    activeTab === 'users' 
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' 
-                      : 'text-gray-700 hover:bg-gray-100' 
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${activeTab === 'users'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <i className="ri-user-line"></i>
@@ -787,10 +782,9 @@ export default function AdminPage() {
 
                 <button
                   onClick={() => setActiveTab('chat')}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${ 
-                    activeTab === 'chat' 
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' 
-                      : 'text-gray-700 hover:bg-gray-100' 
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${activeTab === 'chat'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <i className="ri-chat-3-line"></i>
@@ -804,10 +798,9 @@ export default function AdminPage() {
 
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${ 
-                    activeTab === 'settings' 
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' 
-                      : 'text-gray-700 hover:bg-gray-100' 
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${activeTab === 'settings'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <i className="ri-settings-line"></i>
@@ -1077,7 +1070,7 @@ export default function AdminPage() {
                                             className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                             title="Avertir l'utilisateur"
                                           >
-                                           
+                                            {/*<i className="ri alert-line"></i>*/}
                                           </button>
                                           {!isMuted ? (
                                             <button
@@ -1089,7 +1082,7 @@ export default function AdminPage() {
                                               className="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-medium hover:bg-orange-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                               title="Mettre en silence"
                                             >
-                                             
+                                              {/*<i className="ri-volume-mute-line"></i>*/}
                                             </button>
                                           ) : (
                                             <button
@@ -1098,7 +1091,7 @@ export default function AdminPage() {
                                               className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                               title="Lever le silence"
                                             >
-                                              
+                                              {/*<i className="ri-volume-mute-line"></i>*/}
                                             </button>
                                           )}
                                           <button
@@ -1110,7 +1103,7 @@ export default function AdminPage() {
                                             className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                             title="Bannir l'utilisateur"
                                           >
-                                            
+                                            {/*<i className="ri-forbid-line"></i>*/}
                                           </button>
                                         </div>
                                       ) : (
@@ -1129,7 +1122,7 @@ export default function AdminPage() {
                                           className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                           title="Remettre à zéro les avertissements"
                                         >
-                                          Reset 
+                                          {/*<i className="ri-reset-line"></i>*/}
                                         </button>
                                       )}
 
@@ -1264,12 +1257,12 @@ export default function AdminPage() {
                       <input
                         type="text"
                         value={settings.general.name}
-                        onChange={(e) => setSettings(prev => ({ 
-                          ...prev, 
-                          general: { 
-                            ...prev.general, 
-                            name: e.target.value 
-                          } 
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          general: {
+                            ...prev.general,
+                            name: e.target.value
+                          }
                         }))}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         placeholder="SORadio"
@@ -1282,12 +1275,12 @@ export default function AdminPage() {
                       </label>
                       <textarea
                         value={settings.general.slogan}
-                        onChange={(e) => setSettings(prev => ({ 
-                          ...prev, 
-                          general: { 
-                            ...prev.general, 
-                            slogan: e.target.value 
-                          } 
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          general: {
+                            ...prev.general,
+                            slogan: e.target.value
+                          }
                         }))}
                         rows={3}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -1343,34 +1336,30 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <div className="text-center mb-6">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${ 
-                moderationAction.type === 'ban' ? 'bg-red-100' :
-                moderationAction.type === 'mute' ? 'bg-orange-100' : 'bg-yellow-100'
-              }`}>
-                <i className={`text-2xl ${ 
-                  moderationAction.type === 'ban' ? 'ri-forbid-line text-red-600' :
-                  moderationAction.type === 'mute' ? 'ri-volume-mute-line text-orange-600' : 
-                  'ri-alert-line text-yellow-600'
+              <div
+                className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${moderationAction.type === 'ban' ? 'bg-red-100' :
+                  moderationAction.type === 'mute' ? 'bg-orange-100' : 'bg-yellow-100'
+                }`}
+              >
+                <i className={`text-2xl ${moderationAction.type === 'ban' ? 'ri-forbid-line text-red-600' :
+                  moderationAction.type === 'mute' ? 'ri-volume-mute-line text-orange-600' : 'ri-alert-line text-yellow-600'
                 }`}></i>
               </div>
               <h3 className="text-xl font-bold text-gray-800">
                 {moderationAction.type === 'ban' ? 'Bannir l\'utilisateur' :
-                 moderationAction.type === 'mute' ? 'Mettre en silence' :
-                 'Avertir l\'utilisateur'}
+                  moderationAction.type === 'mute' ? 'Mettre en silence' : 'Avertir l\'utilisateur'}
               </h3>
               <p className="text-gray-600 mt-2">
                 {moderationAction.type === 'ban' ? 'Cette action interdira complètement l\'accès au chat' :
-                 moderationAction.type === 'mute' ? 'Cette action empêchera l\'utilisateur d\'envoyer des messages' :
-                 'Après 3 avertissements, l\'utilisateur sera automatiquement mis en silence 24h'}
+                  moderationAction.type === 'mute' ? 'Cette action empêchera l\'utilisateur d\'envoyer des messages' : 'Après 3 avertissements, l\'utilisateur sera automatiquement mis en silence 24h'}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Raison {moderationAction.type === 'ban' ? 'du bannissement' : 
-                           moderationAction.type === 'mute' ? 'de la mise en silence' : 
-                           'de l\'avertissement'}
+                  Raison {moderationAction.type === 'ban' ? 'du bannissement' :
+                    moderationAction.type === 'mute' ? 'de la mise en silence' : 'de l\'avertissement'}
                 </label>
                 <textarea
                   value={moderationAction.reason}
@@ -1427,15 +1416,12 @@ export default function AdminPage() {
                     );
                   }}
                   disabled={processing !== '' || !moderationAction.reason.trim()}
-                  className={`flex-1 px-4 py-3 text-white rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 ${ 
-                    moderationAction.type === 'ban' ? 'bg-red-500 hover:bg-red-600' :
-                    moderationAction.type === 'mute' ? 'bg-orange-500 hover:bg-orange-600' :
-                    'bg-yellow-500 hover:bg-yellow-600'
+                  className={`flex-1 px-4 py-3 text-white rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 ${moderationAction.type === 'ban' ? 'bg-red-500 hover:bg-red-600' :
+                    moderationAction.type === 'mute' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'
                   }`}
                 >
                   {moderationAction.type === 'ban' ? 'Bannir' :
-                   moderationAction.type === 'mute' ? 'Mettre en silence' :
-                   'Avertir'}
+                    moderationAction.type === 'mute' ? 'Mettre en silence' : 'Avertir'}
                 </button>
               </div>
             </div>
