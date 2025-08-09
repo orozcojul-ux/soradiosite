@@ -60,9 +60,51 @@ export default function AdminPage() {
     type: 'info' as 'info' | 'warning' | 'emergency'
   });
   const [settings, setSettings] = useState<SiteSettings>({
-    siteName: 'SORadio',
-    siteDescription: 'La radio qui vous accompagne',
-    maintenanceMode: false
+    general: {
+      name: 'SORadio',
+      slogan: 'La radio qui vous accompagne',
+      frequency: '105.7 MHz',
+      email: 'contact@soradio.fr',
+      phone: '+33 5 56 12 34 56',
+      address: '123 Rue de la République, 33000 Bordeaux, France'
+    },
+    streaming: {
+      primaryUrl: '',
+      backupUrl: '',
+      bitrate: '320',
+      format: 'mp3',
+      maxListeners: '5000',
+      sourcePassword: ''
+    },
+    social: {
+      facebook: '',
+      instagram: '',
+      twitter: '',
+      youtube: '',
+      spotify: '',
+      tiktok: ''
+    },
+    email: {
+      smtpServer: '',
+      smtpPort: '587',
+      emailUser: '',
+      emailPassword: '',
+      audienceNotif: true,
+      techAlerts: true,
+      newUsers: true,
+      dailyReports: false
+    },
+    api: {
+      publicKey: '',
+      secretKey: '',
+      webhookStats: '',
+      webhookListeners: ''
+    },
+    system: {
+      maintenanceMode: false,
+      maintenanceReason: '',
+      maintenanceEndTime: ''
+    }
   });
 
   const roleColors = {
@@ -175,7 +217,7 @@ export default function AdminPage() {
     try {
       const loadedSettings = await getSettings();
       setSettings(loadedSettings);
-      setStreamStatus(loadedSettings.maintenanceMode ? 'maintenance' : 'live');
+      setStreamStatus(loadedSettings.system.maintenanceMode ? 'maintenance' : 'live');
     } catch (error) {
       console.error('❌ Admin: Erreur chargement paramètres:', error);
     }
@@ -336,10 +378,16 @@ export default function AdminPage() {
     try {
       setProcessing('Modification du mode maintenance');
 
-      const newMaintenanceMode = !settings.maintenanceMode;
+      const newMaintenanceMode = !settings.system.maintenanceMode;
       await toggleMaintenanceMode(newMaintenanceMode);
 
-      setSettings(prev => ({ ...prev, maintenanceMode: newMaintenanceMode }));
+      setSettings(prev => ({ 
+        ...prev, 
+        system: { 
+          ...prev.system, 
+          maintenanceMode: newMaintenanceMode 
+        } 
+      }));
       setStreamStatus(newMaintenanceMode ? 'maintenance' : 'live');
 
       setMessage(`✅ Mode maintenance ${newMaintenanceMode ? 'activé' : 'désactivé'}`);
@@ -482,7 +530,7 @@ export default function AdminPage() {
           updateData.ban_reason = reason;
           updateData.is_muted = false; // Un ban annule le mute
           break;
-        
+
         case 'mute':
           updateData.is_muted = true;
           const muteHours = parseInt(duration || '1');
@@ -490,11 +538,11 @@ export default function AdminPage() {
           muteUntil.setHours(muteUntil.getHours() + muteHours);
           updateData.mute_until = muteUntil.toISOString();
           break;
-        
+
         case 'warn':
           const currentWarnings = userToModerate.warnings_count || 0;
           updateData.warnings_count = currentWarnings + 1;
-          
+
           // Auto-mute après 3 avertissements
           if (currentWarnings + 1 >= 3) {
             updateData.is_muted = true;
@@ -534,7 +582,7 @@ export default function AdminPage() {
       const actionText = action === 'ban' ? 'banni' : action === 'mute' ? 'mis en silence' : 'averti';
       setMessage(`✅ ${userToModerate.full_name || userToModerate.email} a été ${actionText} avec succès`);
       setTimeout(() => setMessage(''), 5000);
-      
+
       setShowModerationModal(false);
       setModerationAction({ type: '', userId: '', reason: '', duration: '1' });
 
@@ -638,7 +686,7 @@ export default function AdminPage() {
           <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mb-8 mx-auto animate-bounce">
             <i className="ri-settings-line text-white text-3xl"></i>
           </div>
-          <h1 className="text-3xl font-['Pacifico'] text-gray-800 mb-4">SORadio Admin</h1>
+          <h1 className="text-3xl font-[\'Pacifico\'] text-gray-800 mb-4">SORadio Admin</h1>
           <p className="text-gray-600 font-medium">Vérification des accès...</p>
         </div>
       </div>
@@ -692,7 +740,7 @@ export default function AdminPage() {
                 <i className="ri-radio-line text-white"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-['Pacifico'] text-gray-800">SORadio</h1>
+                <h1 className="text-2xl font-[\'Pacifico\'] text-gray-800">SORadio</h1>
                 <p className="text-orange-500 text-sm">Panel Admin Avancé</p>
               </div>
             </Link>
@@ -968,17 +1016,17 @@ export default function AdminPage() {
                                       )}
                                       {userProfile.is_banned && (
                                         <span className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-medium">
-                                          🚫 BANNI
+                                          BANNI
                                         </span>
                                       )}
                                       {isMuted && (
                                         <span className="px-2 py-1 bg-orange-500 text-white text-xs rounded-full font-medium">
-                                          🔇 MUTE
+                                          MUTE
                                         </span>
                                       )}
                                       {(userProfile.warnings_count || 0) > 0 && (
                                         <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full font-medium">
-                                          ⚠️ {userProfile.warnings_count}
+                                          {userProfile.warnings_count}
                                         </span>
                                       )}
                                     </h4>
@@ -1004,7 +1052,7 @@ export default function AdminPage() {
                                       <select
                                         value={userProfile.role || 'auditeur'}
                                         onChange={(e) => {
-                                          console.log('🔄 Admin: Changement rôle demandé:', e.target.value);
+                                          console.log(' Admin: Changement rôle demandé:', e.target.value);
                                           updateUserRole(userProfile.id, e.target.value);
                                         }}
                                         disabled={processing !== '' || userProfile.is_banned}
@@ -1029,7 +1077,7 @@ export default function AdminPage() {
                                             className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                             title="Avertir l'utilisateur"
                                           >
-                                            ⚠️
+                                           
                                           </button>
                                           {!isMuted ? (
                                             <button
@@ -1041,7 +1089,7 @@ export default function AdminPage() {
                                               className="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-medium hover:bg-orange-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                               title="Mettre en silence"
                                             >
-                                              🔇
+                                             
                                             </button>
                                           ) : (
                                             <button
@@ -1050,7 +1098,7 @@ export default function AdminPage() {
                                               className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                               title="Lever le silence"
                                             >
-                                              🔊
+                                              
                                             </button>
                                           )}
                                           <button
@@ -1062,7 +1110,7 @@ export default function AdminPage() {
                                             className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                             title="Bannir l'utilisateur"
                                           >
-                                            🚫
+                                            
                                           </button>
                                         </div>
                                       ) : (
@@ -1081,7 +1129,7 @@ export default function AdminPage() {
                                           className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                           title="Remettre à zéro les avertissements"
                                         >
-                                          Reset ⚠️
+                                          Reset 
                                         </button>
                                       )}
 
@@ -1215,8 +1263,14 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={settings.siteName}
-                        onChange={(e) => setSettings(prev => ({ ...prev, siteName: e.target.value }))}
+                        value={settings.general.name}
+                        onChange={(e) => setSettings(prev => ({ 
+                          ...prev, 
+                          general: { 
+                            ...prev.general, 
+                            name: e.target.value 
+                          } 
+                        }))}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         placeholder="SORadio"
                       />
@@ -1227,8 +1281,14 @@ export default function AdminPage() {
                         Description du Site
                       </label>
                       <textarea
-                        value={settings.siteDescription}
-                        onChange={(e) => setSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
+                        value={settings.general.slogan}
+                        onChange={(e) => setSettings(prev => ({ 
+                          ...prev, 
+                          general: { 
+                            ...prev.general, 
+                            slogan: e.target.value 
+                          } 
+                        }))}
                         rows={3}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         placeholder="La radio qui vous accompagne"
@@ -1243,10 +1303,10 @@ export default function AdminPage() {
                       <button
                         onClick={handleMaintenanceToggle}
                         disabled={processing !== ''}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${settings.maintenanceMode ? 'bg-red-500' : 'bg-gray-300'}`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${settings.system.maintenanceMode ? 'bg-red-500' : 'bg-gray-300'}`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`}
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.system.maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`}
                         />
                       </button>
                     </div>
@@ -1355,7 +1415,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => {
                     if (!moderationAction.reason.trim()) {
-                      setMessage('❌ Veuillez indiquer une raison');
+                      setMessage(' Veuillez indiquer une raison');
                       setTimeout(() => setMessage(''), 3000);
                       return;
                     }
