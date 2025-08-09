@@ -1,12 +1,37 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ChatWidget from '@/components/ChatWidget';
+import { supabase } from '@/lib/supabase';
 
 export default function PodcastsPage() {
   const [selectedCategory, setSelectedCategory] = useState('tous');
+  const [user, setUser] = useState<any>(null);
+
+  // 添加用户状态管理
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthRequest = () => {
+    // 重定向到首页进行身份验证
+    window.location.href = '/';
+  };
 
   const podcasts = [
     {
@@ -374,7 +399,7 @@ export default function PodcastsPage() {
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
