@@ -93,9 +93,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           table: 'site_settings',
           filter: 'category=eq.system'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Changement détecté:', payload);
-          if (payload.new?.key === 'maintenanceMode') {
+          if (payload.new && payload.new.key === 'maintenanceMode') {
             const maintenanceActive = payload.new.value === 'true';
             setMaintenanceMode(maintenanceActive);
             console.log('Mode maintenance mis à jour:', maintenanceActive);
