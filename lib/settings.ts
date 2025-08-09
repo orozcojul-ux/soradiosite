@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase';
@@ -143,7 +144,7 @@ export const saveSettings = async (settings: SiteSettings): Promise<boolean> => 
         updates.push({
           category,
           key,
-          value: typeof value === 'boolean' ? value.toString() : value
+          value: typeof value === 'boolean' ? value.toString() : String(value)
         });
       });
     });
