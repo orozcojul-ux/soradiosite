@@ -1,12 +1,36 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ChatWidget from '@/components/ChatWidget';
+import { supabase } from '@/lib/supabase';
 
 export default function EquipePage() {
   const [selectedDepartment, setSelectedDepartment] = useState('tous');
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthRequest = () => {
+    // Rediriger vers la page d'accueil pour se connecter
+    window.location.href = '/';
+  };
 
   const equipe = [
     {
@@ -263,7 +287,7 @@ export default function EquipePage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-4xl font-bold text-indigo-600 mb-2">15+</div>
-              <div className="text-gray-600">Années d\'expérience moyenne</div>
+              <div className="text-gray-600">Années d'expérience moyenne</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-indigo-600 mb-2">10</div>
@@ -307,7 +331,7 @@ export default function EquipePage() {
         </div>
       </section>
 
-      {/* Grille de l\'équipe */}
+      {/* Grille de l'équipe */}
       <section className="py-16">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -321,14 +345,14 @@ export default function EquipePage() {
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  
+                
                   {/* Badge département */}
                   <div className="absolute top-4 left-4">
                     <span className={`bg-gradient-to-r ${departments.find(d => d.key === member.department)?.color || 'from-gray-500 to-gray-600'} text-white px-3 py-1 rounded-full text-sm font-medium`}>
                       {departments.find(d => d.key === member.department)?.label || member.department}
                     </span>
                   </div>
-                  
+                
                   {/* Réseaux sociaux en overlay */}
                   <div className="absolute bottom-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {member.social.instagram && (
@@ -367,15 +391,15 @@ export default function EquipePage() {
                 <div className="p-6">
                   <h3 className="text-2xl font-bold text-gray-800 mb-2">{member.name}</h3>
                   <p className="text-indigo-600 font-semibold mb-2">{member.role}</p>
-                  
+                
                   {member.show && (
                     <p className="text-orange-500 font-medium mb-3">
                       {member.show}
                     </p>
                   )}
-                  
+                
                   <p className="text-gray-600 mb-4 leading-relaxed text-sm">{member.bio}</p>
-                  
+                
                   {/* Spécialités */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     {member.specialties.map((specialty, index) => (
@@ -384,7 +408,7 @@ export default function EquipePage() {
                       </span>
                     ))}
                   </div>
-                  
+                
                   {/* Bouton contact */}
                   <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:scale-105 transition-transform cursor-pointer whitespace-nowrap">
                     <i className="ri-mail-line mr-2"></i>
@@ -397,7 +421,7 @@ export default function EquipePage() {
         </div>
       </section>
 
-      {/* Section Rejoindre l\'équipe */}
+      {/* Section Rejoindre l'équipe */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-6">
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-12 text-center border border-indigo-200">
@@ -490,7 +514,7 @@ export default function EquipePage() {
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
