@@ -5,58 +5,102 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function UserMenu() {
-  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier la session Supabase en temps réel
-    const checkAuthState = async () => {
+    console.log('👤 UserMenu: Init avec système corrigé');
+    
+    const getUserProfile = async () => {
       try {
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        // Vérifier d'abord la session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (!supabaseUser) {
-          // Pas d'utilisateur authentifié, nettoyer le localStorage
-          localStorage.removeItem('user_session');
-          setUser(null);
+        if (sessionError) {
+          console.error('❌ UserMenu: Erreur session:', sessionError);
+          setProfile(null);
+          setLoading(false);
           return;
         }
 
-        // Vérifier si le profil existe toujours dans la base
-        const { data: profile, error } = await supabase
+        if (!session?.user) {
+          console.log('👤 UserMenu: Pas de session utilisateur');
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        const user = session.user;
+        console.log('👤 UserMenu: Session utilisateur trouvée:', user.email);
+
+        // Récupérer le profil depuis la table profiles
+        const { data: profileData, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', supabaseUser.id)
+          .eq('id', user.id)
           .single();
 
-        if (error || !profile) {
-          // Profil n'existe pas, déconnecter
-          localStorage.removeItem('user_session');
-          setUser(null);
-          return;
+        if (error) {
+          console.error('❌ UserMenu: Erreur récupération profil:', error);
+          // Si le profil n'existe pas, on le crée
+          if (error.code === 'PGRST116') {
+            console.log('👤 UserMenu: Création du profil manquant');
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                email: user.email,
+                full_name: user.user_metadata?.full_name || user.email,
+                is_admin: false
+              })
+              .select()
+              .single();
+
+            if (!createError && newProfile) {
+              console.log('✅ UserMenu: Profil créé:', newProfile.full_name);
+              setProfile(newProfile);
+            }
+          }
+        } else if (profileData) {
+          console.log('✅ UserMenu: Profil récupéré:', profileData.full_name);
+          setProfile(profileData);
         }
 
-        // Utilisateur authentifié avec profil valide
-        setUser(profile);
-        localStorage.setItem('user_session', JSON.stringify(profile));
-
       } catch (error) {
-        console.log('Erreur lors de la vérification de session:', error);
-        localStorage.removeItem('user_session');
-        setUser(null);
+        console.error('❌ UserMenu: Erreur générale:', error);
+        setProfile(null);
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Vérification initiale
-    checkAuthState();
+    // Récupération initiale
+    getUserProfile();
     
-    // Écouter les changements d'état d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Écouter les changements d'auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 UserMenu: Auth changé:', event, session?.user?.email || 'no user');
+      
       if (event === 'SIGNED_OUT' || !session) {
-        localStorage.removeItem('user_session');
-        setUser(null);
-      } else if (event === 'SIGNED_IN' && session) {
-        checkAuthState();
+        console.log('🚪 UserMenu: Déconnexion');
+        setProfile(null);
+        setLoading(false);
+      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        console.log('🔑 UserMenu: Connexion/Refresh, rechargement profil');
+        setLoading(true);
+        // Petit délai pour laisser le trigger créer le profil si nécessaire
+        setTimeout(getUserProfile, 500);
       }
     });
 
@@ -67,17 +111,30 @@ export default function UserMenu() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      localStorage.removeItem('user_session');
-      setUser(null);
       setDropdownOpen(false);
-      window.location.reload();
+      console.log('🚪 UserMenu: Déconnexion');
+      await supabase.auth.signOut();
+      setProfile(null);
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+      console.error('❌ UserMenu: Erreur déconnexion:', error);
     }
   };
 
-  if (!user) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="w-8 h-8 bg-gray-400/20 rounded-full animate-pulse"></div>
+        <div className="text-xs text-orange-300">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    console.log('👤 UserMenu: Pas de profil - masquage composant');
+    return null;
+  }
+
+  console.log('👤 UserMenu: RENDU avec profil:', profile.full_name);
 
   return (
     <div className="relative">
@@ -88,7 +145,9 @@ export default function UserMenu() {
         <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
           <i className="ri-user-line text-white text-sm"></i>
         </div>
-        <span className="hidden md:block font-medium">{user.full_name || 'Utilisateur'}</span>
+        <span className="hidden md:block font-medium">
+          {profile.full_name || profile.email}
+        </span>
         <i className="ri-arrow-down-s-line"></i>
       </button>
 
@@ -108,7 +167,7 @@ export default function UserMenu() {
                 <i className="ri-user-line text-orange-500"></i>
                 <span>Mon Profil</span>
               </Link>
-              {user.is_admin && (
+              {profile.is_admin && (
                 <Link
                   href="/admin"
                   className="flex items-center space-x-2 px-4 py-2 text-orange-600 hover:bg-gray-50 transition-colors cursor-pointer"

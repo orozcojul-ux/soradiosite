@@ -1,22 +1,23 @@
+
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
+import Link from 'next/link';
+import ChatWidget from '@/components/ChatWidget';
 
-export default function Contact() {
+export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: ''
   });
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 3000);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    console.log('Form submitted:', formData);
+    // Simuler l'envoi
+    alert('Message envoyé avec succès !');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -27,316 +28,301 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="bg-black/20 backdrop-blur-md border-b border-white/10">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 cursor-pointer">
-              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                <i className="ri-radio-line text-white text-xl"></i>
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-lg">
+                <i className="ri-radio-line text-white"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-['Pacifico'] text-white">SORadio</h1>
-                <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
+                <h1 className="text-2xl font-['Pacifico'] text-gray-800">SORadio</h1>
+                <p className="text-orange-500 text-sm">Contact</p>
               </div>
             </Link>
+            
             <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Accueil</Link>
-              <Link href="/programmes" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Programmes</Link>
-              <Link href="/podcasts" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Podcasts</Link>
-              <Link href="/equipe" className="text-white hover:text-orange-400 transition-colors cursor-pointer">Équipe</Link>
-              <Link href="/contact" className="text-orange-400 cursor-pointer">Contact</Link>
+              <Link href="/" className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium">
+                Accueil
+              </Link>
+
+              <div className="relative group">
+                <button className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium flex items-center space-x-1">
+                  <span>Programmes</span>
+                  <i className="ri-arrow-down-s-line text-sm"></i>
+                </button>
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-orange-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-2">
+                    <Link href="/programmes" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-3">
+                        <i className="ri-calendar-line text-orange-500"></i>
+                        <span>Grille des programmes</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative group">
+                <button className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium flex items-center space-x-1">
+                  <span>Contenu</span>
+                  <i className="ri-arrow-down-s-line text-sm"></i>
+                </button>
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-orange-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-2">
+                    <Link href="/podcasts" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-3">
+                        <i className="ri-headphone-line text-orange-500"></i>
+                        <span>Podcasts</span>
+                      </div>
+                    </Link>
+                    <Link href="/playlist" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-3">
+                        <i className="ri-play-list-line text-orange-500"></i>
+                        <span>Playlist</span>
+                      </div>
+                    </Link>
+                    <Link href="/actualites" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-3">
+                        <i className="ri-newspaper-line text-orange-500"></i>
+                        <span>Actualités</span>
+                      </div>
+                    </Link>
+                    <Link href="/evenements" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-3">
+                        <i className="ri-calendar-event-line text-orange-500"></i>
+                        <span>Événements</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <Link href="/equipe" className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium">
+                Équipe
+              </Link>
+              <Link href="/contact" className="text-orange-500 font-medium cursor-pointer">
+                Contact
+              </Link>
             </nav>
-            <button className="md:hidden text-white">
-              <i className="ri-menu-line text-2xl"></i>
-            </button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url('https://readdy.ai/api/search-image?query=Modern%20radio%20station%20contact%20center%20with%20professional%20communication%20equipment%2C%20urban%20Bordeaux%20cityscape%2C%20professional%20broadcasting%20studio%20interior%2C%20warm%20orange%20and%20purple%20lighting%2C%20contemporary%20design%2C%20radio%20waves%20visualization%2C%20professional%20customer%20service%20environment%20with%20French%20radio%20station%20aesthetic&width=1920&height=800&seq=contact-hero&orientation=landscape')`
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/50"></div>
-        </div>
-        
-        <div className="relative z-10 container mx-auto px-6 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Contactez</span> SORadio
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
-            Une question, une suggestion ou envie de rejoindre l'équipe ? Nous sommes à votre écoute !
+      <section className="py-20 bg-gradient-to-r from-orange-500 to-red-500">
+        <div className="container mx-auto px-6 text-center">
+          <h1 className="text-5xl font-bold text-white mb-6">Contactez-nous</h1>
+          <p className="text-xl text-white/90 max-w-2xl mx-auto">
+            Une question, une suggestion, ou envie de nous rejoindre ? N'hésitez pas à nous écrire
           </p>
         </div>
       </section>
 
-      {/* Contact Content */}
-      <section className="py-20">
+      {/* Informations de contact */}
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16">
-            {/* Contact Form */}
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-              <h2 className="text-3xl font-bold text-white mb-8">Envoyez-nous un message</h2>
-              
-              {isSubmitted && (
-                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-6">
-                  <div className="flex items-center space-x-3">
-                    <i className="ri-check-line text-green-400 text-xl"></i>
-                    <p className="text-green-400 font-semibold">Message envoyé avec succès !</p>
-                  </div>
-                </div>
-              )}
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i className="ri-map-pin-line text-white text-2xl"></i>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Adresse</h3>
+              <p className="text-gray-600">
+                123 Rue de la République<br />
+                33000 Bordeaux, France
+              </p>
+            </div>
 
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i className="ri-phone-line text-white text-2xl"></i>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Téléphone</h3>
+              <p className="text-gray-600">
+                Standard : +33 5 56 12 34 56<br />
+                Antenne : +33 5 56 12 34 57
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i className="ri-mail-line text-white text-2xl"></i>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Email</h3>
+              <p className="text-gray-600">
+                contact@soradio.fr<br />
+                redaction@soradio.fr
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Formulaire de contact */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-6">
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-800 mb-4">Écrivez-nous</h2>
+              <p className="text-xl text-gray-600">Nous vous répondrons dans les plus brefs délais</p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-lg">
               <form id="contact-form" onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-white font-semibold mb-2">Nom complet</label>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom complet *
+                    </label>
                     <input
                       type="text"
+                      id="name"
                       name="name"
+                      required
                       value={formData.name}
                       onChange={handleChange}
-                      required
-                      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
                       placeholder="Votre nom et prénom"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-white font-semibold mb-2">Email</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email *
+                    </label>
                     <input
                       type="email"
+                      id="email"
                       name="email"
+                      required
                       value={formData.email}
                       onChange={handleChange}
-                      required
-                      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
                       placeholder="votre@email.com"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-white font-semibold mb-2">Sujet</label>
-                  <div className="relative">
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 pr-8 text-white focus:border-orange-500 focus:outline-none text-sm appearance-none"
-                    >
-                      <option value="">Sélectionnez un sujet</option>
-                      <option value="general">Question générale</option>
-                      <option value="programmation">Suggestion de programmation</option>
-                      <option value="technique">Problème technique</option>
-                      <option value="partenariat">Proposition de partenariat</option>
-                      <option value="candidature">Candidature spontanée</option>
-                      <option value="autre">Autre</option>
-                    </select>
-                    <i className="ri-arrow-down-s-line absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-                  </div>
+                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                    Sujet *
+                  </label>
+                  <select
+                    id="subject"
+                    name="subject"
+                    required
+                    value={formData.subject}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors pr-8"
+                  >
+                    <option value="">Choisissez un sujet</option>
+                    <option value="general">Question générale</option>
+                    <option value="technique">Problème technique</option>
+                    <option value="programmation">Programmation</option>
+                    <option value="partenariat">Partenariat</option>
+                    <option value="recrutement">Recrutement</option>
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-white font-semibold mb-2">Message</label>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                    Message *
+                  </label>
                   <textarea
+                    id="message"
                     name="message"
-                    value={formData.message}
-                    onChange={handleChange}
+                    rows={6}
                     required
                     maxLength={500}
-                    rows={6}
-                    className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none text-sm resize-none"
-                    placeholder="Votre message..."
-                  />
-                  <p className="text-gray-400 text-sm mt-2">{formData.message.length}/500 caractères</p>
+                    value={formData.message}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors resize-vertical"
+                    placeholder="Votre message... (500 caractères maximum)"
+                  ></textarea>
+                  <div className="text-right text-sm text-gray-500 mt-1">
+                    {formData.message.length}/500 caractères
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={formData.message.length > 500}
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-lg font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
                   <i className="ri-send-plane-line mr-2"></i>
                   Envoyer le message
                 </button>
               </form>
             </div>
-
-            {/* Contact Info */}
-            <div className="space-y-8">
-              {/* Informations de contact */}
-              <div className="bg-black/20 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-                <h3 className="text-2xl font-bold text-white mb-6">Nos coordonnées</h3>
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                      <i className="ri-map-pin-line text-white"></i>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-semibold mb-1">Adresse</h4>
-                      <p className="text-gray-300">123 Rue de la Radio<br/>33000 Bordeaux, France</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                      <i className="ri-phone-line text-white"></i>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-semibold mb-1">Téléphone</h4>
-                      <p className="text-gray-300">05 56 78 90 12</p>
-                      <p className="text-sm text-orange-400">Lun-Ven: 9h-18h</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                      <i className="ri-mail-line text-white"></i>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-semibold mb-1">Email</h4>
-                      <p className="text-gray-300">contact@soradio.fr</p>
-                      <p className="text-sm text-orange-400">Réponse sous 24h</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Horaires d'antenne */}
-              <div className="bg-black/20 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-                <h3 className="text-2xl font-bold text-white mb-6">Horaires d'antenne</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Lundi - Vendredi</span>
-                    <span className="text-orange-400 font-semibold">24h/24</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Weekend</span>
-                    <span className="text-orange-400 font-semibold">24h/24</span>
-                  </div>
-                  <div className="border-t border-white/10 pt-4">
-                    <p className="text-sm text-gray-400">
-                      Diffusion continue sur FM 105.7 MHz, DAB+ et en streaming sur soradio.fr
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Réseaux sociaux */}
-              <div className="bg-black/20 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-                <h3 className="text-2xl font-bold text-white mb-6">Suivez-nous</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <a href="#" className="flex items-center space-x-3 bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
-                    <i className="ri-facebook-fill text-blue-400 text-2xl"></i>
-                    <span className="text-white">Facebook</span>
-                  </a>
-                  <a href="#" className="flex items-center space-x-3 bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
-                    <i className="ri-instagram-line text-pink-400 text-2xl"></i>
-                    <span className="text-white">Instagram</span>
-                  </a>
-                  <a href="#" className="flex items-center space-x-3 bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
-                    <i className="ri-twitter-x-line text-gray-400 text-2xl"></i>
-                    <span className="text-white">Twitter</span>
-                  </a>
-                  <a href="#" className="flex items-center space-x-3 bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
-                    <i className="ri-spotify-fill text-green-400 text-2xl"></i>
-                    <span className="text-white">Spotify</span>
-                  </a>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Map Section */}
-      <section className="py-20 bg-black/20 backdrop-blur-sm">
+      {/* Horaires et infos pratiques */}
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">Nous trouver</h2>
-            <p className="text-xl text-gray-300">SORadio se situe au cœur de Bordeaux</p>
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">Infos Pratiques</h2>
           </div>
-          
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-            <div className="aspect-video rounded-lg overflow-hidden">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2828.5947244707975!2d-0.5791799!3d44.8378!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd5527e8f751ca81%3A0x796386037b397a89!2sBordeaux%2C%20France!5e0!3m2!1sen!2sus!4v1639581234567!5m2!1sen!2sus"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="rounded-lg"
-              ></iframe>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">Horaires d'ouverture</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                  <span className="font-semibold text-gray-700">Lundi - Vendredi</span>
+                  <span className="text-orange-600 font-bold">08:00 - 19:00</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                  <span className="font-semibold text-gray-700">Samedi</span>
+                  <span className="text-orange-600 font-bold">09:00 - 17:00</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                  <span className="font-semibold text-gray-700">Dimanche</span>
+                  <span className="text-gray-500">Fermé</span>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                  <p className="text-orange-700 font-medium">
+                    📻 L'antenne est ouverte 24h/24 !
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">Comment nous écouter</h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <i className="ri-radio-line text-orange-500 text-xl"></i>
+                    <span className="font-semibold text-gray-700">FM</span>
+                  </div>
+                  <p className="text-gray-600">105.7 MHz dans toute la région bordelaise</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <i className="ri-signal-tower-line text-orange-500 text-xl"></i>
+                    <span className="font-semibold text-gray-700">DAB+</span>
+                  </div>
+                  <p className="text-gray-600">Canal 11D - Qualité numérique</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <i className="ri-global-line text-orange-500 text-xl"></i>
+                    <span className="font-semibold text-gray-700">En ligne</span>
+                  </div>
+                  <p className="text-gray-600">soradio.fr - Partout dans le monde</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-black/40 backdrop-blur-md border-t border-white/10 py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                  <i className="ri-radio-line text-white"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-['Pacifico'] text-white">SORadio</h3>
-                  <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
-                </div>
-              </div>
-              <p className="text-gray-400">La voix du Sud-Ouest, 24h/24 depuis Bordeaux.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Navigation</h4>
-              <ul className="space-y-2">
-                <li><Link href="/" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">Accueil</Link></li>
-                <li><Link href="/programmes" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">Programmes</Link></li>
-                <li><Link href="/podcasts" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">Podcasts</Link></li>
-                <li><Link href="/equipe" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">Équipe</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li className="flex items-center space-x-2">
-                  <i className="ri-map-pin-line text-orange-400"></i>
-                  <span>Bordeaux, France</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <i className="ri-phone-line text-orange-400"></i>
-                  <span>05 56 78 90 12</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <i className="ri-mail-line text-orange-400"></i>
-                  <span>contact@soradio.fr</span>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Fréquences</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>FM: 105.7 MHz</li>
-                <li>DAB+: 11D</li>
-                <li>Streaming: soradio.fr</li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 mt-8 pt-8 text-center">
-            <p className="text-gray-400">&copy; 2024 SORadio - Sud Ouest Radio. Tous droits réservés.</p>
-          </div>
-        </div>
-      </footer>
+      <ChatWidget />
     </div>
   );
 }
