@@ -1,17 +1,36 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ChatWidget from '@/components/ChatWidget';
+import { supabase } from '@/lib/supabase';
 
 export default function ContactPage() {
+  const [user, setUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: ''
   });
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +46,11 @@ export default function ContactPage() {
     });
   };
 
+  const handleAuthRequest = () => {
+    // Rediriger vers la page d'accueil pour se connecter
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -38,11 +62,11 @@ export default function ContactPage() {
                 <i className="ri-radio-line text-white"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-['Pacifico'] text-gray-800">SORadio</h1>
+                <h1 className="text-2xl font-[\'Pacifico\'] text-gray-800">SORadio</h1>
                 <p className="text-orange-500 text-sm">Contact</p>
               </div>
             </Link>
-            
+
             <nav className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-gray-600 hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Accueil
@@ -286,7 +310,7 @@ export default function ContactPage() {
                 </div>
                 <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
                   <p className="text-orange-700 font-medium">
-                    📻 L'antenne est ouverte 24h/24 !
+                    L'antenne est ouverte 24h/24 !
                   </p>
                 </div>
               </div>
@@ -322,7 +346,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <ChatWidget />
+      <ChatWidget user={user} onAuthRequest={handleAuthRequest} />
     </div>
   );
 }
