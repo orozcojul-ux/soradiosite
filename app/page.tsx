@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getSettings, type SiteSettings } from '@/lib/settings';
+import { type SiteSettings } from '@/lib/settings';
 import UserMenu from '@/components/UserMenu';
 import AuthModal from '@/components/AuthModal';
 import ChatWidget from '@/components/ChatWidget';
@@ -13,117 +13,137 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [authInitialized, setAuthInitialized] = useState(false);
-  const [authModal, setAuthModal] = useState<{
-    isOpen: boolean;
-    mode: 'login' | 'signup';
-  }>({
+  const [settings, setSettings] = useState<SiteSettings>({
+    general: {
+      name: 'SORadio',
+      slogan: 'Just hits, so fun!',
+      frequency: '105.7 MHz',
+      email: 'contact@soradio.fr',
+      phone: '+33 5 56 12 34 56',
+      address: '123 Rue de la République, 33000 Bordeaux, France',
+    },
+    streaming: {
+      primaryUrl: '',
+      backupUrl: '',
+      bitrate: '320',
+      format: 'mp3',
+      maxListeners: '5000',
+      sourcePassword: '',
+    },
+    social: {
+      facebook: '',
+      instagram: '',
+      twitter: '',
+      youtube: '',
+      spotify: '',
+      tiktok: '',
+    },
+    email: {
+      smtpServer: '',
+      smtpPort: '587',
+      emailUser: '',
+      emailPassword: '',
+      audienceNotif: true,
+      techAlerts: true,
+      newUsers: true,
+      dailyReports: false,
+    },
+    api: {
+      publicKey: '',
+      secretKey: '',
+      webhookStats: '',
+      webhookListeners: '',
+    },
+    system: {
+      maintenanceMode: false,
+      maintenanceReason: '',
+      maintenanceEndTime: '',
+    },
+  });
+  const [authInitialized, setAuthInitialized] = useState(true);
+  const [authModal, setAuthModal] = useState({
     isOpen: false,
     mode: 'login',
   });
 
   useEffect(() => {
-    console.log('INIT SYSTÈME UTILISATEUR RECRÉÉ');
+    console.log('Initialisation page principale ULTRA RAPIDE');
 
     const initializeApp = async () => {
       try {
-        // Charger les paramètres par défaut
-        const defaultSettings: SiteSettings = {
-          general: {
-            name: 'SORadio',
-            slogan: 'Just hits, so fun!',
-            frequency: '105.7 MHz',
-            email: 'contact@soradio.fr',
-            phone: '+33 5 56 12 34 56',
-            address: '123 Rue de la République, 33000 Bordeaux, France',
-          },
-          streaming: {
-            primaryUrl: '',
-            backupUrl: '',
-            bitrate: '320',
-            format: 'mp3',
-            maxListeners: '5000',
-            sourcePassword: '',
-          },
-          social: {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            youtube: '',
-            spotify: '',
-            tiktok: '',
-          },
-          email: {
-            smtpServer: '',
-            smtpPort: '587',
-            emailUser: '',
-            emailPassword: '',
-            audienceNotif: true,
-            techAlerts: true,
-            newUsers: true,
-            dailyReports: false,
-          },
-          api: {
-            publicKey: '',
-            secretKey: '',
-            webhookStats: '',
-            webhookListeners: '',
-          },
-          system: {
-            maintenanceMode: false,
-            maintenanceReason: '',
-            maintenanceEndTime: '',
-          },
-        };
+        setTimeout(async () => {
+          try {
+            console.log('Vérification session utilisateur en arrière-plan...');
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        setSettings(defaultSettings);
+            if (sessionError) {
+              console.warn('Erreur session (non-bloquante):', sessionError);
+              setUser(null);
+              return;
+            }
 
-        // Vérifier la session existante AVANT de récupérer l'utilisateur
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (session?.user) {
+              console.log('Session utilisateur trouvée:', session.user.email);
+              setUser(session.user);
+            } else {
+              console.log('Aucune session utilisateur active');
+              setUser(null);
+            }
+          } catch (error) {
+            console.warn('Erreur vérification session (ignorée):', error);
+            setUser(null);
+          }
+        }, 50);
 
-        if (sessionError) {
-          console.error('Erreur session:', sessionError);
-          setUser(null);
-          setAuthInitialized(true);
-          return;
-        }
+        setTimeout(async () => {
+          try {
+            console.log('Chargement paramètres site en arrière-plan...');
+            const { data: settingsData } = await supabase
+              .from('site_settings')
+              .select('category, key, value');
 
-        if (session?.user) {
-          console.log('Session trouvée:', session.user.email);
-          setUser(session.user);
-        } else {
-          console.log('Aucune session active');
-          setUser(null);
-        }
+            if (settingsData && settingsData.length > 0) {
+              const newSettings: any = { ...settings };
 
-        setAuthInitialized(true);
+              settingsData.forEach((item) => {
+                if (newSettings[item.category]) {
+                  if ((item.category === 'email' && ['audienceNotif', 'techAlerts', 'newUsers', 'dailyReports'].includes(item.key)) ||
+                      (item.category === 'system' && item.key === 'maintenanceMode')) {
+                    newSettings[item.category][item.key] = item.value === 'true';
+                  } else {
+                    newSettings[item.category][item.key] = item.value;
+                  }
+                }
+              });
+
+              setSettings(newSettings);
+              console.log('Paramètres site mis à jour');
+            }
+          } catch (error) {
+            console.warn('Erreur chargement paramètres (non-critique):', error);
+          }
+        }, 200);
       } catch (error) {
-        console.error('Erreur init:', error);
-        setUser(null);
-        setAuthInitialized(true);
+        console.warn('Erreur initialisation générale (non-critique):', error);
       }
     };
 
     initializeApp();
 
-    // Écouter les changements d'authentification avec gestion améliorée
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth Event:', event, session?.user?.email || 'no user');
+        console.log('Événement auth:', event, session?.user?.email || 'no user');
 
         if (event === 'SIGNED_OUT' || !session?.user) {
           console.log('Déconnexion détectée');
           setUser(null);
         } else if (event === 'SIGNED_IN' && session?.user) {
-          console.log('Connexion détectée:', session.user.email);
+          console.log('Connexion réussie détectée:', session.user.email);
           setUser(session.user);
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          console.log('Token rafraîchi:', session.user.email);
+          console.log('Token rafraîchi pour:', session.user.email);
           setUser(session.user);
         }
-
-        setAuthInitialized(true);
       }
     );
 
@@ -133,10 +153,9 @@ export default function Home() {
   }, []);
 
   const handleAuthSuccess = async () => {
-    console.log('AUTH SUCCESS - Récupération utilisateur');
+    console.log('Authentification réussie - Récupération utilisateur');
     setAuthModal({ ...authModal, isOpen: false });
 
-    // Récupérer immédiatement la session après auth success
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -144,54 +163,17 @@ export default function Home() {
         setUser(session.user);
       }
     } catch (error) {
-      console.error('Erreur récupération user après auth:', error);
+      console.error('Erreur récupération utilisateur après auth:', error);
     }
   };
 
-  // Affichage du chargement jusqu'à ce que l'auth soit initialisée
-  if (!authInitialized) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mb-8 mx-auto animate-bounce">
-            <i className="ri-radio-line text-white text-3xl"></i>
-          </div>
-          <h1 className="text-3xl font-[\'Pacifico\'] text-gray-800 mb-4">SORadio</h1>
-          <div className="flex items-center justify-center space-x-1 mb-4">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"
-                style={{ animationDelay: `${i * 0.3}s` }}
-              />
-            ))}
-          </div>
-          <p className="text-gray-600 font-medium">Initialisation...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!settings) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">SORadio</h1>
-          <p className="text-gray-600">Chargement des paramètres...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Logique d'affichage des boutons d'authentification
   const showAuthButtons = !user;
   const showUserMenu = !!user;
 
-  console.log('RENDU FINAL:');
-  console.log('   - Auth initialisé:', authInitialized);
-  console.log('   - Utilisateur:', user?.email || 'Aucun');
-  console.log('   - Boutons Auth:', showAuthButtons ? 'VISIBLES ' : 'CACHÉS ');
-  console.log('   - Menu User:', showUserMenu ? 'VISIBLE ' : 'CACHÉ ');
+  console.log('RENDU PAGE PRINCIPAL:');
+  console.log('   - Utilisateur connecté:', user?.email || 'Aucun');
+  console.log('   - Affichage boutons auth:', showAuthButtons);
+  console.log('   - Affichage menu utilisateur:', showUserMenu);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -211,7 +193,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-3xl font-[\'Pacifico\'] text-white drop-shadow-lg">
-                  {settings.general.name || 'SORadio'}
+                  {settings.general.name}
                 </h1>
                 <p className="text-orange-300 text-sm font-medium">
                   {settings.general.slogan}
@@ -220,10 +202,7 @@ export default function Home() {
             </div>
 
             <nav className="hidden md:flex items-center space-x-8">
-              <Link
-                href="/"
-                className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium"
-              >
+              <Link href="/" className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Accueil
               </Link>
 
@@ -234,10 +213,7 @@ export default function Home() {
                 </button>
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-orange-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
-                    <Link
-                      href="/programmes/morning-show"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/programmes/morning-show" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-sun-line text-orange-500"></i>
                         <div>
@@ -246,10 +222,7 @@ export default function Home() {
                         </div>
                       </div>
                     </Link>
-                    <Link
-                      href="/programmes/mix-afternoon"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/programmes/mix-afternoon" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-music-line text-orange-500"></i>
                         <div>
@@ -258,10 +231,7 @@ export default function Home() {
                         </div>
                       </div>
                     </Link>
-                    <Link
-                      href="/programmes/night-session"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/programmes/night-session" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-moon-line text-orange-500"></i>
                         <div>
@@ -271,10 +241,7 @@ export default function Home() {
                       </div>
                     </Link>
                     <div className="border-t border-gray-200 mt-2 pt-2">
-                      <Link
-                        href="/programmes"
-                        className="block px-4 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer font-medium"
-                      >
+                      <Link href="/programmes" className="block px-4 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer font-medium">
                         Voir tous les programmes
                       </Link>
                     </div>
@@ -289,37 +256,25 @@ export default function Home() {
                 </button>
                 <div className="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-orange-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
-                    <Link
-                      href="/podcasts"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/podcasts" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-headphone-line text-orange-500"></i>
                         <span>Podcasts</span>
                       </div>
                     </Link>
-                    <Link
-                      href="/playlist"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/playlist" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-play-list-line text-orange-500"></i>
                         <span>Playlist</span>
                       </div>
                     </Link>
-                    <Link
-                      href="/actualites"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/actualites" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-newspaper-line text-orange-500"></i>
                         <span>Actualités</span>
                       </div>
                     </Link>
-                    <Link
-                      href="/evenements"
-                      className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <Link href="/evenements" className="block px-4 py-3 text-gray-800 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <i className="ri-calendar-event-line text-orange-500"></i>
                         <span>Événements</span>
@@ -329,16 +284,10 @@ export default function Home() {
                 </div>
               </div>
 
-              <Link
-                href="/equipe"
-                className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium"
-              >
+              <Link href="/equipe" className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Équipe
               </Link>
-              <Link
-                href="/contact"
-                className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium"
-              >
+              <Link href="/contact" className="text-white hover:text-orange-300 transition-colors cursor-pointer font-medium">
                 Contact
               </Link>
             </nav>
@@ -348,26 +297,19 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="text-white hover:text-orange-300 transition-colors cursor-pointer"
               >
-                <i
-                  className={`${mobileMenuOpen ? 'ri-close-line' : 'ri-menu-line'} text-2xl`}
-                ></i>
+                <i className={`${mobileMenuOpen ? 'ri-close-line' : 'ri-menu-line'} text-2xl`}></i>
               </button>
             </div>
 
-            {/* Zone authentification desktop - FORCÉE POUR DEBUG */}
             <div className="hidden md:flex items-center space-x-4 min-w-0">
-              {/* Menu utilisateur si connecté */}
               {showUserMenu && (
                 <div className="flex items-center">
-                  <div className="mr-2 text-xs text-orange-300">Connecté:</div>
                   <UserMenu />
                 </div>
               )}
 
-              {/* Boutons authentification si pas connecté */}
               {showAuthButtons && (
                 <div className="flex items-center space-x-3">
-                  <div className="text-xs text-orange-300">Non connecté</div>
                   <button
                     onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
                     className="text-white hover:text-orange-300 transition-colors cursor-pointer whitespace-nowrap font-medium"
@@ -385,42 +327,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Menu mobile */}
           {mobileMenuOpen && (
             <div className="md:hidden mt-6 bg-black/20 backdrop-blur-md rounded-xl border border-white/20">
               <div className="p-4 space-y-2">
-                <Link
-                  href="/"
-                  className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                >
+                <Link href="/" className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
                   Accueil
                 </Link>
-                <Link
-                  href="/programmes"
-                  className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                >
+                <Link href="/programmes" className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
                   Programmes
                 </Link>
-                <Link
-                  href="/podcasts"
-                  className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                >
+                <Link href="/podcasts" className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
                   Podcasts
                 </Link>
-                <Link
-                  href="/equipe"
-                  className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                >
+                <Link href="/equipe" className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
                   Équipe
                 </Link>
-                <Link
-                  href="/contact"
-                  className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                >
+                <Link href="/contact" className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
                   Contact
                 </Link>
 
-                {/* Boutons authentification mobile - même logique */}
                 {showAuthButtons && (
                   <div className="border-t border-white/20 pt-4 space-y-2">
                     <button
@@ -444,7 +369,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Menu user mobile */}
                 {showUserMenu && (
                   <div className="border-t border-white/20 pt-4">
                     <div className="flex items-center space-x-3 px-4 py-3 text-white">
@@ -482,9 +406,7 @@ export default function Home() {
                     onClick={() => setIsPlaying(!isPlaying)}
                     className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-lg"
                   >
-                    <i
-                      className={`${isPlaying ? 'ri-pause-fill' : 'ri-play-fill'} text-white text-2xl`}
-                    ></i>
+                    <i className={`${isPlaying ? 'ri-pause-fill' : 'ri-play-fill'} text-white text-2xl`}></i>
                   </button>
                   <div>
                     <p className="text-gray-800 font-bold text-lg"> En Direct</p>
@@ -492,7 +414,7 @@ export default function Home() {
                       Morning Show • Sophie & Marc
                     </p>
                     <p className="text-gray-500 text-sm">
-                      {settings.general.frequency || '105.7 MHz'} • soradio.fr
+                      {settings.general.frequency} • soradio.fr
                     </p>
                   </div>
                 </div>
@@ -676,34 +598,22 @@ export default function Home() {
               <h4 className="text-white font-semibold mb-4">Navigation</h4>
               <ul className="space-y-2">
                 <li>
-                  <Link
-                    href="/"
-                    className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer"
-                  >
+                  <Link href="/" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">
                     Accueil
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    href="/programmes"
-                    className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer"
-                  >
+                  <Link href="/programmes" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">
                     Programmes
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    href="/podcasts"
-                    className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer"
-                  >
+                  <Link href="/podcasts" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">
                     Podcasts
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    href="/equipe"
-                    className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer"
-                  >
+                  <Link href="/equipe" className="text-gray-400 hover:text-orange-400 transition-colors cursor-pointer">
                     Équipe
                   </Link>
                 </li>
@@ -729,7 +639,7 @@ export default function Home() {
             <div>
               <h4 className="text-white font-semibold mb-4">Fréquences</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>FM: {settings.general.frequency || '105.7 MHz'}</li>
+                <li>FM: {settings.general.frequency}</li>
                 <li>DAB+: 11D</li>
                 <li>Streaming: soradio.fr</li>
               </ul>

@@ -1,9 +1,6 @@
 
 'use client';
 
-// Original code:
-// ...
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getSettings, saveSettings, toggleMaintenanceMode, type SiteSettings } from '@/lib/settings';
@@ -25,10 +22,13 @@ interface UserProfile {
 interface ChatMessage {
   id: string;
   user_id: string;
+  user_name: string;
+  user_email: string;
   message: string;
   created_at: string;
   user_role: string;
   profiles: {
+    id: string;
     full_name: string;
     email: string;
     role: string;
@@ -73,6 +73,7 @@ export default function AdminPanel() {
 
   // État pour gérer les mises à jour de rôles
   const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(null);
+  const [banUserLoading, setBanUserLoading] = useState(false);
 
   // États pour fermeture temporaire du chat
   const [chatClosed, setChatClosed] = useState(false);
@@ -214,7 +215,21 @@ export default function AdminPanel() {
     try {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select(`*, profiles (full_name, email, role)`)
+        .select(`
+          id,
+          user_id,
+          user_name,
+          user_email,
+          user_role,
+          message,
+          created_at,
+          profiles!inner (
+            id,
+            full_name,
+            email,
+            role
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -223,6 +238,7 @@ export default function AdminPanel() {
         return;
       }
 
+      console.log('Messages chargés avec profils:', data);
       setChatMessages(data || []);
     } catch (error) {
       console.error('Erreur chargement messages:', error);
@@ -330,41 +346,66 @@ export default function AdminPanel() {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
-    if (roleUpdateLoading === userId) return; // Eviter les appels multiples
+    if (roleUpdateLoading === userId) return;
 
-    console.log(` Mise à jour rôle: ${userId} -> ${newRole}`);
+    console.log(`🔄 Début mise à jour rôle: ${userId} -> ${newRole}`);
     setRoleUpdateLoading(userId);
 
     try {
       const isAdmin = newRole === 'admin';
-      const updateData = {
-        role: newRole,
-        is_admin: isAdmin,
-        updated_at: new Date().toISOString()
-      };
 
-      console.log(' Données à mettre à jour:', updateData);
-
-      // 1. Mise à jour directe avec vérification immédiate
-      const { data: updateResult, error: updateError } = await supabase
+      // 1. Vérifier d'abord que l'utilisateur existe
+      const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
-        .update(updateData)
+        .select('id, role, is_admin, email, full_name')
         .eq('id', userId)
-        .select('*')
         .single();
 
-      if (updateError) {
-        console.error(' Erreur mise à jour:', updateError);
-        throw new Error(`Erreur Supabase: ${updateError.message}`);
+      if (checkError || !existingUser) {
+        throw new Error('Utilisateur non trouvé dans la base de données');
       }
 
-      if (!updateResult) {
-        throw new Error('Aucun résultat retourné par la mise à jour');
+      console.log(`👤 Utilisateur trouvé: ${existingUser.email}, rôle actuel: ${existingUser.role}`);
+
+      // 2. Effectuer la mise à jour avec retry
+      let updateAttempts = 0;
+      let updateSuccess = false;
+      let updateResult = null;
+
+      while (updateAttempts < 3 && !updateSuccess) {
+        updateAttempts++;
+        console.log(`📝 Tentative de mise à jour ${updateAttempts}/3`);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            role: newRole,
+            is_admin: isAdmin,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error(`❌ Erreur tentative ${updateAttempts}:`, error);
+          if (updateAttempts === 3) {
+            throw error;
+          }
+          // Attendre 1 seconde avant de réessayer
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          updateResult = data;
+          updateSuccess = true;
+          console.log(`✅ Mise à jour réussie à la tentative ${updateAttempts}`);
+        }
       }
 
-      console.log(' Mise à jour réussie:', updateResult);
+      if (!updateSuccess || !updateResult) {
+        throw new Error('Échec de toutes les tentatives de mise à jour');
+      }
 
-      // 2. Vérification immédiate de la mise à jour
+      // 3. Vérification immédiate
       const { data: verifyData, error: verifyError } = await supabase
         .from('profiles')
         .select('id, role, is_admin, updated_at')
@@ -372,12 +413,12 @@ export default function AdminPanel() {
         .single();
 
       if (verifyError) {
-        console.warn(' Erreur vérification:', verifyError);
+        console.warn(`⚠️ Erreur vérification (mais mise à jour peut avoir réussi):`, verifyError);
       } else {
-        console.log(' Vérification:', verifyData);
+        console.log(`🔍 Vérification: rôle=${verifyData.role}, admin=${verifyData.is_admin}`);
       }
 
-      // 3. Mise à jour immédiate de l'état local
+      // 4. Mise à jour immédiate de l'état local
       setAllUsers(prevUsers => {
         const updatedUsers = prevUsers.map(user =>
           user.id === userId
@@ -389,19 +430,16 @@ export default function AdminPanel() {
               }
             : user
         );
-        console.log(' État local mis à jour');
         return updatedUsers;
       });
 
-      // 4. Rechargement complet des utilisateurs (avec délai)
+      // 5. Rechargement différé pour confirmation
       setTimeout(async () => {
-        console.log(' Rechargement complet des utilisateurs...');
         await loadAllUsers();
-      }, 1000);
+        console.log('🔄 Rechargement des utilisateurs terminé');
+      }, 2000);
 
-      console.log(' Rôle utilisateur mis à jour avec succès !');
-
-      // Message de succès personnalisé
+      // Message de succès
       const roleNames = {
         'auditeur': 'Auditeur',
         'moderateur': 'Modérateur',
@@ -411,39 +449,40 @@ export default function AdminPanel() {
         'admin': 'Administrateur'
       };
 
-      alert(` Rôle mis à jour avec succès !\n\nNouveau rôle: ${roleNames[newRole as keyof typeof roleNames] || newRole}`);
+      alert(`✅ Rôle mis à jour avec succès !\n\nUtilisateur: ${existingUser.full_name || existingUser.email}\nNouveau rôle: ${roleNames[newRole as keyof typeof roleNames] || newRole}`);
     } catch (error: any) {
-      console.error(' ERREUR COMPLETE mise à jour rôle:', error);
+      console.error('💥 ERREUR mise à jour rôle:', error);
 
-      // Messages d'erreur détaillés
       let errorMessage = 'Erreur lors de la mise à jour du rôle';
 
-      if (error.message?.includes('permission denied')) {
-        errorMessage = 'Permissions insuffisantes pour modifier ce rôle';
-      } else if (error.message?.includes('row level security')) {
-        errorMessage = 'Règles de sécurité empêchent la modification';
-      } else if (error.message?.includes('not found')) {
+      if (error.message?.includes('permission denied') || error.code === 'PGRST301') {
+        errorMessage = 'Permissions insuffisantes - Vérifiez vos droits d\'administrateur';
+      } else if (error.message?.includes('row level security') || error.code === 'PGRST401') {
+        errorMessage = 'Règles de sécurité RLS - Contactez le développeur';
+      } else if (error.message?.includes('not found') || error.code === 'PGRST106') {
         errorMessage = 'Utilisateur non trouvé';
+      } else if (error.message?.includes('unique constraint')) {
+        errorMessage = 'Conflit de données - Réessayez';
       } else if (error.message) {
         errorMessage = `Erreur: ${error.message}`;
       }
 
-      alert(` ${errorMessage}\n\nVeuillez réessayer ou contacter le support technique.`);
-
-      // Recharger les données pour restaurer l'état correct
-      await loadAllUsers();
-
+      alert(`❌ ${errorMessage}\n\nCode erreur: ${error.code || 'inconnu'}\nVeuillez réessayer ou contacter le support.`);
     } finally {
       setRoleUpdateLoading(null);
     }
   };
 
   const banUser = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || banUserLoading) return;
+
+    console.log(`🚫 Début bannissement: ${selectedUser.email}`);
+    setBanUserLoading(true);
 
     try {
       let banUntil = null;
 
+      // Calculer la date de fin de bannissement
       if (!isPermanentBan) {
         const now = new Date();
         const duration = banDuration;
@@ -461,112 +500,213 @@ export default function AdminPanel() {
         }
       }
 
-      const { error } = await supabase
+      console.log(`📅 Date bannissement: ${banUntil ? new Date(banUntil).toLocaleString('fr-FR') : 'Permanent'}`);
+
+      // Vérifier d'abord que l'utilisateur existe
+      const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
-        .update({
-          banned_until: banUntil,
-          ban_reason: banReason,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedUser.id);
+        .select('id, email, full_name')
+        .eq('id', selectedUser.id)
+        .single();
 
-      if (error) throw error;
+      if (checkError || !existingUser) {
+        throw new Error('Utilisateur non trouvé');
+      }
 
+      // Effectuer le bannissement avec retry
+      let banAttempts = 0;
+      let banSuccess = false;
+      let banResult = null;
+
+      while (banAttempts < 3 && !banSuccess) {
+        banAttempts++;
+        console.log(`📝 Tentative bannissement ${banAttempts}/3`);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            banned_until: banUntil,
+            ban_reason: banReason.trim() || 'Aucune raison spécifiée',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error(`❌ Erreur tentative ${banAttempts}:`, error);
+          if (banAttempts === 3) {
+            throw error;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          banResult = data;
+          banSuccess = true;
+          console.log(`✅ Bannissement réussi à la tentative ${banAttempts}`);
+        }
+      }
+
+      if (!banSuccess || !banResult) {
+        throw new Error('Échec de toutes les tentatives de bannissement');
+      }
+
+      // Fermer le modal et réinitialiser
       setShowBanModal(false);
       setBanReason('');
       setIsPermanentBan(false);
-      await loadAllUsers();
-      alert('Utilisateur banni avec succès !');
-    } catch (error) {
-      console.error('Erreur bannissement:', error);
-      alert('Erreur lors du bannissement');
+      setSelectedUser(null);
+
+      // Recharger les données
+      await Promise.all([
+        loadAllUsers(),
+        loadStats()
+      ]);
+
+      // Message de confirmation
+      const banMessage = isPermanentBan
+        ? 'Utilisateur banni définitivement !'
+        : `Utilisateur banni jusqu'au ${new Date(banUntil!).toLocaleString('fr-FR')} !`;
+
+      alert(`✅ ${banMessage}\n\nUtilisateur: ${selectedUser.full_name || selectedUser.email}\nRaison: ${banReason.trim() || 'Aucune raison spécifiée'}`);
+    } catch (error: any) {
+      console.error('💥 Erreur complète bannissement:', error);
+
+      let errorMessage = 'Erreur lors du bannissement';
+
+      if (error.message?.includes('permission denied') || error.code === 'PGRST301') {
+        errorMessage = 'Permissions insuffisantes pour bannir cet utilisateur';
+      } else if (error.message?.includes('row level security') || error.code === 'PGRST401') {
+        errorMessage = 'Règles de sécurité RLS empêchent le bannissement';
+      } else if (error.message?.includes('not found') || error.code === 'PGRST106') {
+        errorMessage = 'Utilisateur non trouvé';
+      } else if (error.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+
+      alert(`❌ ${errorMessage}\n\nCode erreur: ${error.code || 'inconnu'}\nVeuillez vérifier vos permissions ou contacter le support.`);
+    } finally {
+      setBanUserLoading(false);
     }
   };
 
   const unbanUser = async (userId: string) => {
     try {
-      const { error } = await supabase
+      console.log(`🔓 Débannissement: ${userId}`);
+
+      // Vérifier que l'utilisateur existe
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, banned_until')
+        .eq('id', userId)
+        .single();
+
+      if (checkError || !existingUser) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      if (!existingUser.banned_until) {
+        alert('⚠️ Cet utilisateur n\'est pas banni');
+        return;
+      }
+
+      // Effectuer le débannissement
+      const { data: updateResult, error } = await supabase
         .from('profiles')
         .update({
           banned_until: null,
           ban_reason: null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('*')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      await loadAllUsers();
-      alert('Utilisateur débanni avec succès !');
-    } catch (error) {
-      console.error('Erreur débannissement:', error);
-      alert('Erreur lors du débannissement');
+      console.log('✅ Débannissement réussi');
+
+      // Recharger les données
+      await Promise.all([
+        loadAllUsers(),
+        loadStats()
+      ]);
+
+      alert(`✅ Utilisateur débanni avec succès !\n\nUtilisateur: ${existingUser.full_name || existingUser.email}\nL\'utilisateur peut maintenant se reconnecter normalement.`);
+    } catch (error: any) {
+      console.error('💥 Erreur débannissement:', error);
+
+      let errorMessage = 'Erreur lors du débannissement';
+
+      if (error.message?.includes('permission denied') || error.code === 'PGRST301') {
+        errorMessage = 'Permissions insuffisantes pour débannir cet utilisateur';
+      } else if (error.message?.includes('row level security') || error.code === 'PGRST401') {
+        errorMessage = 'Règles de sécurité empêchent le débannissement';
+      } else if (error.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+
+      alert(`❌ ${errorMessage}\n\nCode erreur: ${error.code || 'inconnu'}\nVeuillez vérifier vos permissions.`);
     }
-  };
-
-  const sendAlert = async () => {
-    if (!selectedUser || !alertMessage) return;
-
-    alert(`Alerte envoyée à ${selectedUser.full_name || selectedUser.email}: ${alertMessage}`);
-
-    setShowAlertModal(false);
-    setAlertMessage('');
-  };
-
-  // Chat Moderation Functions
-  const deleteMessage = async (messageId: string) => {
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      await loadChatMessages();
-      alert('Message supprimé avec succès !');
-    } catch (error) {
-      console.error('Erreur suppression message:', error);
-      alert('Erreur lors de la suppression');
-    }
-  };
-
-  const muteUserFromChat = async (userId: string) => {
-    alert(`Utilisateur muet pour ${muteDuration}`);
-  };
-
-  const banUserFromChat = async (userId: string) => {
-    alert('Utilisateur banni du chat');
-  };
-
-  const sendWarning = async (userId: string) => {
-    if (!warningMessage) return;
-
-    alert(`Avertissement envoyé : ${warningMessage}`);
-    setWarningMessage('');
   };
 
   const clearAllMessages = async () => {
     setClearChatLoading(true);
     try {
+      console.log('🧹 Début de la suppression de tous les messages...');
+
+      // Méthode plus robuste : supprimer tous les messages existants
       const { error } = await supabase
         .from('chat_messages')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Supprimer tous les messages
+        .gt('created_at', '1900-01-01T00:00:00.000Z'); // Supprimer tous les messages créés après 1900
 
       if (error) {
-        console.error('Erreur suppression messages:', error);
-        alert('Erreur lors de la suppression des messages');
+        console.error('❌ Erreur suppression messages:', error);
+
+        // Messages d'erreur détaillés
+        let errorMessage = 'Erreur lors de la suppression des messages';
+
+        if (error.message?.includes('permission denied')) {
+          errorMessage = 'Permissions insuffisantes pour supprimer les messages';
+        } else if (error.message?.includes('row level security')) {
+          errorMessage = 'Règles de sécurité empêchent la suppression';
+        } else if (error.message) {
+          errorMessage = `Erreur: ${error.message}`;
+        }
+
+        alert(`❌ ${errorMessage}\n\nVeuillez vérifier vos permissions ou contacter le support.`);
         return;
       }
 
-      // Recharger les messages
-      await loadChatMessages();
+      console.log('✅ Tous les messages ont été supprimés');
+
+      // Recharger les messages et statistiques
+      await Promise.all([
+        loadChatMessages(),
+        loadStats()
+      ]);
+
       setShowClearChatModal(false);
-      alert('Tous les messages ont été supprimés avec succès !');
-    } catch (error) {
-      console.error('Erreur suppression messages:', error);
-      alert('Erreur lors de la suppression des messages');
+      alert('✅ Tous les messages ont été supprimés avec succès !');
+    } catch (error: any) {
+      console.error('💥 Erreur complète suppression messages:', error);
+
+      let errorMessage = 'Erreur lors de la suppression des messages';
+
+      if (error.message?.includes('permission denied')) {
+        errorMessage = 'Permissions insuffisantes pour cette opération';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Problème de connexion réseau';
+      } else if (error.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+
+      alert(`💥 ${errorMessage}\n\nVeuillez réessayer ou contacter le support technique.`);
+
+      // Recharger les données pour restaurer l'état correct
+      await loadChatMessages();
     } finally {
       setClearChatLoading(false);
     }
@@ -929,9 +1069,61 @@ export default function AdminPanel() {
 
       // Recharger les données pour restaurer l'état correct
       await loadAllUsers();
-
     } finally {
       setDeleteUserLoading(false);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    try {
+      console.log(`🗑️ Suppression du message: ${messageId}`);
+
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('❌ Erreur suppression message:', error);
+
+        let errorMessage = 'Erreur lors de la suppression du message';
+
+        if (error.message?.includes('permission denied')) {
+          errorMessage = 'Permissions insuffisantes pour supprimer ce message';
+        } else if (error.message?.includes('row level security')) {
+          errorMessage = 'Règles de sécurité empêchent la suppression';
+        } else if (error.message) {
+          errorMessage = `Erreur: ${error.message}`;
+        }
+
+        alert(`❌ ${errorMessage}\n\nVeuillez vérifier vos permissions ou contacter le support.`);
+        return;
+      }
+
+      console.log('✅ Message supprimé avec succès');
+
+      // Recharger les messages et statistiques
+      await Promise.all([
+        loadChatMessages(),
+        loadStats()
+      ]);
+    } catch (error: any) {
+      console.error('💥 Erreur complète suppression message:', error);
+
+      let errorMessage = 'Erreur lors de la suppression du message';
+
+      if (error.message?.includes('permission denied')) {
+        errorMessage = 'Permissions insuffisantes pour cette opération';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Problème de connexion réseau';
+      } else if (error.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+
+      alert(`💥 ${errorMessage}\n\nVeuillez réessayer ou contacter le support technique.`);
+
+      // Recharger les données pour restaurer l'état correct
+      await loadChatMessages();
     }
   };
 
@@ -1085,8 +1277,17 @@ export default function AdminPanel() {
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Gestion des Utilisateurs</h2>
                 <p className="text-gray-600">Gérer les comptes utilisateur et leurs permissions</p>
               </div>
-              <div className="text-sm text-gray-500">
-                Total: {allUsers.length} utilisateurs
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={loadAllUsers}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer whitespace-nowrap flex items-center"
+                >
+                  <i className="ri-refresh-line mr-2"></i>
+                  Actualiser
+                </button>
+                <div className="text-sm text-gray-500">
+                  Total: {allUsers.length} utilisateurs
+                </div>
               </div>
             </div>
 
@@ -1119,7 +1320,7 @@ export default function AdminPanel() {
                             value={user.role}
                             onChange={(e) => updateUserRole(user.id, e.target.value)}
                             disabled={roleUpdateLoading === user.id}
-                            className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500"
+                            className={`px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 ${roleUpdateLoading === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <option value="auditeur">Auditeur</option>
                             <option value="vip">VIP</option>
@@ -1128,6 +1329,12 @@ export default function AdminPanel() {
                             <option value="moderateur">Modérateur</option>
                             <option value="admin">Admin</option>
                           </select>
+                          {roleUpdateLoading === user.id && (
+                            <div className="mt-1 text-xs text-orange-600 flex items-center">
+                              <div className="w-3 h-3 border border-orange-500 border-t-transparent rounded-full animate-spin mr-1"></div>
+                              Mise à jour...
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex flex-col space-y-1">
@@ -1286,18 +1493,21 @@ export default function AdminPanel() {
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">
                               <span className="font-medium text-gray-800">
-                                {message.profiles?.full_name || 'Utilisateur'}
+                                {message.user_name || message.profiles?.full_name || message.profiles?.email || message.user_email || 'Utilisateur'}
                               </span>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${message.user_role === 'admin' ? 'bg-red-100 text-red-800' : message.user_role === 'moderateur' ? 'bg-green-100 text-green-800' : message.user_role === 'journaliste' ? 'bg-blue-100 text-blue-800' : message.user_role === 'animateur' ? 'bg-purple-100 text-purple-800' : message.user_role === 'vip' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}
                               >
-                                {message.user_role}
+                                {message.user_role || message.profiles?.role || 'auditeur'}
                               </span>
                               <span className="text-xs text-gray-500">
                                 {new Date(message.created_at).toLocaleString('fr-FR')}
                               </span>
                             </div>
                             <p className="text-gray-700">{message.message}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Email: {message.user_email || message.profiles?.email || 'Non disponible'}
+                            </div>
                           </div>
                           <button
                             onClick={() => deleteMessage(message.id)}
@@ -1341,19 +1551,19 @@ export default function AdminPanel() {
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="text-2xl font-bold text-green-600">
-                  {betaKeys.filter(key => key.is_active && new Date(key.expires_at) > new Date()).length}
+                  {betaKeys.filter((key) => key.is_active && new Date(key.expires_at) > new Date()).length}
                 </div>
                 <div className="text-sm text-gray-600">Actives</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="text-2xl font-bold text-orange-600">
-                  {betaKeys.filter(key => key.usage_count >= key.max_usage).length}
+                  {betaKeys.filter((key) => key.usage_count >= key.max_usage).length}
                 </div>
                 <div className="text-sm text-gray-600">Utilisées</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="text-2xl font-bold text-red-600">
-                  {betaKeys.filter(key => new Date(key.expires_at) <= new Date()).length}
+                  {betaKeys.filter((key) => new Date(key.expires_at) <= new Date()).length}
                 </div>
                 <div className="text-sm text-gray-600">Expirées</div>
               </div>
@@ -1859,7 +2069,7 @@ export default function AdminPanel() {
               <button
                 onClick={deleteUser}
                 disabled={deleteUserLoading}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap"
               >
                 {deleteUserLoading ? (
                   <>
@@ -1930,6 +2140,184 @@ export default function AdminPanel() {
               >
                 <i className="ri-delete-bin-line mr-2"></i>
                 Supprimer Définitivement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation de suppression du chat */}
+      {showClearChatModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-delete-bin-line text-red-600 text-2xl"></i>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Vider complètement le Chat</h3>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-red-800 font-medium mb-2">⚠️ ATTENTION : Action irréversible</p>
+                <p className="text-red-700 text-sm leading-relaxed">
+                  Vous êtes sur le point de supprimer définitivement <strong>TOUS</strong> les messages du chat.
+                </p>
+                <div className="bg-white rounded-lg p-3 mt-3 border border-red-200">
+                  <p className="text-gray-800 font-medium">Messages à supprimer :</p>
+                  <p className="text-2xl font-bold text-red-600">{chatMessages.length} messages</p>
+                  <p className="text-gray-600 text-sm">De tous les utilisateurs</p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+                <p className="text-yellow-800 text-sm">
+                  <i className="ri-warning-line mr-1"></i>
+                  Cette action supprimera définitivement tous les messages. L'historique du chat sera perdu.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-center space-x-3">
+              <button
+                onClick={() => setShowClearChatModal(false)}
+                disabled={clearChatLoading}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={clearAllMessages}
+                disabled={clearChatLoading}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              >
+                {clearChatLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2 inline-block"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-delete-bin-line mr-2"></i>
+                    Vider Définitivement
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de bannissement */}
+      {showBanModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-forbid-line text-red-600 text-2xl"></i>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Bannir l'utilisateur</h3>
+
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="font-medium text-gray-800">{selectedUser.full_name || 'Nom non défini'}</p>
+                <p className="text-gray-600 text-sm">{selectedUser.email}</p>
+                <p className="text-gray-500 text-xs">Rôle: {selectedUser.role}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Durée du bannissement
+                </label>
+                <select
+                  value={banDuration}
+                  onChange={(e) => setBanDuration(e.target.value)}
+                  disabled={isPermanentBan || banUserLoading}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-500 disabled:bg-gray-100"
+                >
+                  <option value="1h">1 heure</option>
+                  <option value="6h">6 heures</option>
+                  <option value="24h">24 heures</option>
+                  <option value="3d">3 jours</option>
+                  <option value="7d">7 jours</option>
+                  <option value="1w">1 semaine</option>
+                  <option value="1m">1 mois</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="permanentBan"
+                  checked={isPermanentBan}
+                  onChange={(e) => setIsPermanentBan(e.target.checked)}
+                  disabled={banUserLoading}
+                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500 disabled:opacity-50"
+                />
+                <label htmlFor="permanentBan" className="text-sm font-medium text-gray-700">
+                  Bannissement permanent
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Raison du bannissement
+                </label>
+                <textarea
+                  value={banReason}
+                  onChange={(e) => setBanReason(e.target.value)}
+                  placeholder="Ex: Comportement inapproprié, spam, violation des règles..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-500 resize-none"
+                  rows={3}
+                  maxLength={500}
+                  disabled={banUserLoading}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {banReason.length}/500 caractères • Cette raison sera visible par l'utilisateur
+                </p>
+              </div>
+
+              <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                <h4 className="font-medium text-red-800 mb-2">Conséquences du bannissement :</h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  <li>• L'utilisateur ne pourra plus se connecter</li>
+                  <li>• Tous ses messages resteront visibles</li>
+                  <li>• Il recevra un message d'explication</li>
+                  <li>• {isPermanentBan ? 'Bannissement définitif' : 'Déban automatique à la fin de la période'}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowBanModal(false);
+                  setBanReason('');
+                  setIsPermanentBan(false);
+                  setSelectedUser(null);
+                }}
+                disabled={banUserLoading}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={banUser}
+                disabled={banUserLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50"
+              >
+                {banUserLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2 inline-block"></div>
+                    Bannissement...
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-forbid-line mr-2"></i>
+                    {isPermanentBan ? 'Bannir Définitivement' : 'Bannir Temporairement'}
+                  </>
+                )}
               </button>
             </div>
           </div>
