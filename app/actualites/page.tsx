@@ -257,7 +257,7 @@ export default function ActualitesPage() {
                 <i className="ri-radio-line text-white text-2xl"></i>
               </div>
               <div>
-                <h1 className="text-3xl font-[\\\'Pacifico\\\'] text-white drop-shadow-lg">
+                <h1 className="text-3xl font-[\'Pacifico\'] text-white drop-shadow-lg">
                   {settings.general.name}
                 </h1>
                 <p className="text-orange-300 text-sm font-medium">
@@ -665,7 +665,7 @@ export default function ActualitesPage() {
                   <i className="ri-radio-line text-white"></i>
                 </div>
                 <div>
-                  <h3 className="text-xl font-[\\\'Pacifico\\\'] text-white">
+                  <h3 className="text-xl font-[\'Pacifico\'] text-white">
                     SORadio
                   </h3>
                   <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
