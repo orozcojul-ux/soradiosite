@@ -60,9 +60,12 @@ export default function PodcastsPage() {
       maintenanceEndTime: '',
     },
   });
-  const [authModal, setAuthModal] = useState({
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    mode: 'login' | 'signup';
+  }>({
     isOpen: false,
-    mode: 'login',
+    mode: 'login' as 'login' | 'signup',
   });
 
   useEffect(() => {
@@ -255,7 +258,7 @@ export default function PodcastsPage() {
                 <i className="ri-radio-line text-white text-2xl"></i>
               </div>
               <div>
-                <h1 className="text-3xl font-[\'Pacifico\'] text-white drop-shadow-lg">
+                <h1 className="text-3xl font-[\\\'Pacifico\\\'] text-white drop-shadow-lg">
                   {settings.general.name}
                 </h1>
                 <p className="text-orange-300 text-sm font-medium">
@@ -658,7 +661,7 @@ export default function PodcastsPage() {
                   <i className="ri-radio-line text-white"></i>
                 </div>
                 <div>
-                  <h3 className="text-xl font-[\'Pacifico\'] text-white">
+                  <h3 className="text-xl font-[\\\'Pacifico\\\'] text-white">
                     SORadio
                   </h3>
                   <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
