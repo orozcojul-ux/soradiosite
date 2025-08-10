@@ -239,7 +239,12 @@ export default function AdminPanel() {
       }
 
       console.log('Messages chargés avec profils:', data);
-      setChatMessages(data || []);
+      // Transformation des données pour correspondre au type ChatMessage
+      const transformedMessages: ChatMessage[] = (data || []).map(msg => ({
+        ...msg,
+        profiles: Array.isArray(msg.profiles) ? msg.profiles[0] : msg.profiles
+      }));
+      setChatMessages(transformedMessages);
     } catch (error) {
       console.error('Erreur chargement messages:', error);
     }
@@ -1051,7 +1056,7 @@ export default function AdminPanel() {
       setShowDeleteUserModal(false);
       setSelectedUserForDeletion(null);
 
-      alert(`Utilisateur ${selectedUserForDeletion.full_name || selectedUserForDeletion.email} supprimé avec succès !\n\nToutes ses données associées ont été effacées :\n- Messages du chat\n- Clés beta créées\n- Profil utilisateur`);
+      alert(`Utilisateur ${selectedUserForDeletion.full_name || selectedUserForDeletion.email} supprimé avec succès !\n\nToutes ses données associées ont été effacées : \n- Messages du chat\n- Clés beta créées\n- Profil utilisateur`);
     } catch (error: any) {
       console.error('Erreur complète suppression utilisateur:', error);
 
@@ -1411,7 +1416,7 @@ export default function AdminPanel() {
                 <p className="text-gray-600">Gérer les messages et modérer les discussions</p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className={`px-3 py-2 rounded-lg text-sm font-medium ${chatClosed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                <div className={`${chatClosed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                   <i className={`${chatClosed ? 'ri-lock-line' : 'ri-chat-3-line'} mr-2`}></i>
                   Chat {chatClosed ? 'Fermé' : 'Ouvert'}
                 </div>
