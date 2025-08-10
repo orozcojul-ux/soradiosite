@@ -59,9 +59,12 @@ export default function ProgrammesPage() {
       maintenanceEndTime: '',
     },
   });
-  const [authModal, setAuthModal] = useState({
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    mode: 'login' | 'signup';
+  }>({
     isOpen: false,
-    mode: 'login',
+    mode: 'login' as 'login' | 'signup',
   });
 
   useEffect(() => {
@@ -171,7 +174,7 @@ export default function ProgrammesPage() {
                 <i className="ri-radio-line text-white text-2xl"></i>
               </div>
               <div>
-                <h1 className="text-3xl font-[\'Pacifico\'] text-white drop-shadow-lg">
+                <h1 className="text-3xl font-[\\\'Pacifico\\\'] text-white drop-shadow-lg">
                   {settings.general.name}
                 </h1>
                 <p className="text-orange-300 text-sm font-medium">
@@ -406,7 +409,7 @@ export default function ProgrammesPage() {
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6">
                 <i className="ri-moon-line text-white text-2xl"></i>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Night Session</h3>
+              <h3 className="text-2xl font.bold text-gray-800 mb-4">Night Session</h3>
               <p className="text-gray-600 mb-4 leading-relaxed">
                 Ambiance nocturne avec des sons électroniques et alternatifs. Pour les
                 noctambules et les amateurs de découvertes.
@@ -426,7 +429,7 @@ export default function ProgrammesPage() {
                   <i className="ri-radio-line text-white"></i>
                 </div>
                 <div>
-                  <h3 className="text-xl font-[\'Pacifico\'] text-white">
+                  <h3 className="text-xl font-[\\\'Pacifico\\\'] text-white">
                     SORadio
                   </h3>
                   <p className="text-orange-400 text-sm">Sud Ouest Radio</p>
