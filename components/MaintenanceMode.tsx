@@ -213,6 +213,16 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
     return null;
   }
 
+  // Données pour les éléments animés
+  const animatedItems = [
+    { color: 'text-orange-400', icon: 'ri-music-2-line', top: '20%', left: '10%', delay: '0s' },
+    { color: 'text-red-400', icon: 'ri-headphone-line', top: '40%', left: '85%', delay: '1s' },
+    { color: 'text-yellow-400', icon: 'ri-radio-line', top: '60%', left: '15%', delay: '2s' },
+    { color: 'text-purple-400', icon: 'ri-sound-module-line', top: '80%', left: '75%', delay: '0.5s' },
+    { color: 'text-blue-400', icon: 'ri-disc-line', top: '30%', left: '90%', delay: '1.5s' },
+    { color: 'text-green-400', icon: 'ri-mic-line', top: '70%', left: '5%', delay: '2.5s' }
+  ];
+
   return (
     <div
       className="fixed inset-0 z-50 min-h-screen bg-cover bg-center bg-no-repeat overflow-hidden"
@@ -278,7 +288,7 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           </div>
         </div>
 
-        {[/* ... existing code ... */].map((item, i) => (
+        {animatedItems.map((item, i) => (
           <div
             key={i}
             className={`absolute w-8 h-8 ${item.color} opacity-20 animate-bounce`}
@@ -595,24 +605,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                       <i className="ri-information-line mr-2"></i>
                       Entrez votre clé beta pour accéder au site pendant la maintenance.
                     </p>
-                  </div>
-
-                  <div className="bg-green-500/10 rounded-lg p-3 border border-green-400/20">
-                    <p className="text-green-300 text-sm mb-2">
-                      <i className="ri-test-tube-line mr-2"></i>
-                      <strong>Test :</strong> Utilisez cette clé de démonstration
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <code className="bg-black/30 px-2 py-1 rounded text-green-300 text-xs font-mono flex-1">
-                        SORADIO-BETA-TEST2024-DEMO1
-                      </code>
-                      <button
-                        onClick={() => setBetaKey('SORADIO-BETA-TEST2024-DEMO1')}
-                        className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs hover:bg-green-500/30 cursor-pointer"
-                      >
-                        Utiliser
-                      </button>
-                    </div>
                   </div>
 
                   <button
