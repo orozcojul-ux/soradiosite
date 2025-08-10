@@ -24,22 +24,22 @@ export default function UserMenu() {
 
   useEffect(() => {
     console.log('👤 UserMenu: Init avec gestion robuste');
-    
+
     const getUserProfile = async (retryCount = 0) => {
       try {
         console.log(`👤 UserMenu: Tentative ${retryCount + 1}/${maxRetries}`);
-        
+
         // Vérifier d'abord la session avec timeout
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Session timeout')), 5000)
         );
-        
+
         const { data: { session }, error: sessionError } = await Promise.race([
           sessionPromise,
           timeoutPromise
         ]) as any;
-        
+
         if (sessionError) {
           console.error('❌ UserMenu: Erreur session:', sessionError);
           setProfile(null);
@@ -66,7 +66,7 @@ export default function UserMenu() {
           .select('*')
           .eq('id', user.id)
           .single();
-          
+
         const profileTimeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Profile timeout')), 8000)
         );
@@ -78,14 +78,14 @@ export default function UserMenu() {
 
         if (error) {
           console.error('❌ UserMenu: Erreur récupération profil:', error);
-          
+
           // Retry si c'est un timeout ou une erreur réseau
           if ((error.message?.includes('timeout') || error.code === 'PGRST301') && retryCount < maxRetries - 1) {
             console.log(`🔄 UserMenu: Retry ${retryCount + 1} après erreur`);
             setTimeout(() => getUserProfile(retryCount + 1), 2000);
             return;
           }
-          
+
           // Si le profil n'existe pas, on le crée
           if (error.code === 'PGRST116') {
             console.log('👤 UserMenu: Création du profil manquant');
@@ -158,14 +158,17 @@ export default function UserMenu() {
 
       } catch (error) {
         console.error('❌ UserMenu: Erreur générale:', error);
-        
+
+        // Vérification du type d'erreur de manière sécurisée
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         // Retry pour erreurs de timeout
-        if (error.message?.includes('timeout') && retryCount < maxRetries - 1) {
+        if (errorMessage.includes('timeout') && retryCount < maxRetries - 1) {
           console.log(`🔄 UserMenu: Retry global ${retryCount + 1} après timeout`);
           setTimeout(() => getUserProfile(retryCount + 1), 3000);
           return;
         }
-        
+
         // Si on a un utilisateur en cours, utiliser les données en fallback
         if (currentUser) {
           console.log('🔄 UserMenu: Erreur mais utilisateur existant - fallback');
@@ -188,17 +191,17 @@ export default function UserMenu() {
 
     // Récupération initiale
     getUserProfile();
-    
+
     // Écouter les changements d'auth avec debounce
     let authTimeout: NodeJS.Timeout;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔔 UserMenu: Auth changé:', event, session?.user?.email || 'no user');
-      
+
       // Débouncer les événements pour éviter les appels multiples
       if (authTimeout) {
         clearTimeout(authTimeout);
       }
-      
+
       authTimeout = setTimeout(async () => {
         if (event === 'SIGNED_OUT' || !session) {
           console.log('🚪 UserMenu: Déconnexion');
@@ -229,12 +232,12 @@ export default function UserMenu() {
     try {
       setDropdownOpen(false);
       console.log('🚪 UserMenu: Déconnexion');
-      
+
       // Nettoyer les états immédiatement
       setProfile(null);
       setCurrentUser(null);
       setLoading(false);
-      
+
       await supabase.auth.signOut();
     } catch (error) {
       console.error('❌ UserMenu: Erreur déconnexion:', error);
