@@ -171,7 +171,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             try {
               const { data: { session } } = await supabase.auth.getSession();
 
-              if (session?.user) {
+              if (session?.user && session.user.email) {
                 console.log('👤 Session utilisateur trouvée, VÉRIFICATION BANNISSEMENT IMMÉDIATE:', session.user.email);
 
                 // VÉRIFICATION CRITIQUE DU BANNISSEMENT
@@ -245,7 +245,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       authSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔐 Changement auth critique:', event, session?.user?.email || 'no user');
 
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (event === 'SIGNED_IN' && session?.user && session.user.email) {
           console.log('✅ Connexion détectée, VÉRIFICATION BANNISSEMENT IMMÉDIATE:', session.user.email);
 
           // VÉRIFICATION CRITIQUE IMMÉDIATE
@@ -272,7 +272,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         } else if (event === 'SIGNED_OUT') {
           console.log('🚪 Déconnexion détectée');
           setIsAdmin(false);
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        } else if (event === 'TOKEN_REFRESHED' && session?.user && session.user.email) {
           console.log('🔄 Token rafraîchi, re-vérification bannissement pour:', session.user.email);
 
           // VÉRIFIER LE BANNISSEMENT MÊME LORS DU REFRESH TOKEN
@@ -300,7 +300,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             // Vérifier si c'est l'utilisateur actuel
             const { data: { session } } = await supabase.auth.getSession();
 
-            if (session?.user && payload.new.id === session.user.id) {
+            if (session?.user && session.user.email && payload.new.id === session.user.id) {
               console.log('🚫 BANNISSEMENT DE L\'UTILISATEUR ACTUEL DÉTECTÉ');
 
               // Vérifier immédiatement le bannissement
