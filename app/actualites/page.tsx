@@ -60,7 +60,10 @@ export default function ActualitesPage() {
       maintenanceEndTime: '',
     },
   });
-  const [authModal, setAuthModal] = useState({
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    mode: 'login' | 'signup';
+  }>({
     isOpen: false,
     mode: 'login',
   });
