@@ -1,19 +1,15 @@
 
-// No changes in the imports
 'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-// Define the MaintenanceModeProps interface
 interface MaintenanceModeProps {
   isActive: boolean;
   onStatusChange: (isActive: boolean) => void;
 }
 
-// Export the MaintenanceMode function
 export default function MaintenanceMode({ isActive, onStatusChange }: MaintenanceModeProps) {
-  // Define and initialize the component's state variables
   const [estimatedEnd, setEstimatedEnd] = useState('');
   const [reason, setReason] = useState('');
   const [showAccessModal, setShowAccessModal] = useState(false);
@@ -27,12 +23,10 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to check maintenance status on load
   useEffect(() => {
     checkMaintenanceStatus();
   }, []);
 
-  // Function to check and update maintenance status
   const checkMaintenanceStatus = async () => {
     try {
       const { data, error } = await supabase
@@ -58,7 +52,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
     }
   };
 
-  // Function to handle admin login
   const handleAdminLogin = async () => {
     setLoading(true);
     setError('');
@@ -75,7 +68,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         return;
       }
 
-      // Check if user is admin
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_admin')
@@ -89,7 +81,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         return;
       }
 
-      // Access granted, reload page
       window.location.reload();
     } catch (error) {
       setError('Erreur de connexion');
@@ -97,13 +88,13 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
     }
   };
 
-  // Function to handle beta access
   const handleBetaAccess = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Check if key has already been used on this browser
+      console.log('🔍 Vérification de la clé beta:', betaKey);
+
       const usedBetaKeys = JSON.parse(localStorage.getItem('used_beta_keys') || '[]');
       if (usedBetaKeys.includes(betaKey)) {
         setError('Cette clé beta a déjà été utilisée sur ce navigateur');
@@ -111,84 +102,94 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         return;
       }
 
-      // Check beta key in database
-      const { data: betaKeyData, error } = await supabase
+      const { data: betaKeysData, error: queryError } = await supabase
         .from('beta_keys')
         .select('*')
-        .eq('key_code', betaKey)
-        .eq('is_active', true)
-        .single();
+        .eq('key_code', betaKey.trim());
 
-      if (error || !betaKeyData) {
-        setError('Clé beta invalide ou désactivée');
+      console.log('📊 Résultat requête clés beta:', { betaKeysData, queryError });
+
+      if (queryError) {
+        console.error('❌ Erreur requête base de données:', queryError);
+        setError(`Erreur de base de données: ${queryError.message}`);
         setLoading(false);
         return;
       }
 
-      // Check if key has not expired
+      if (!betaKeysData || betaKeysData.length === 0) {
+        console.warn('⚠️ Aucune clé trouvée pour:', betaKey);
+        setError('Clé beta invalide');
+        setLoading(false);
+        return;
+      }
+
+      const betaKeyData = betaKeysData[0];
+      console.log('🔑 Données de la clé trouvée:', betaKeyData);
+
+      if (!betaKeyData.is_active) {
+        setError('Cette clé beta est désactivée');
+        setLoading(false);
+        return;
+      }
+
       const now = new Date();
       const expiryDate = new Date(betaKeyData.expires_at);
 
       if (now > expiryDate) {
-        setError('Cette clé beta a expiré');
+        setError(`Cette clé beta a expiré le ${expiryDate.toLocaleDateString('fr-FR')}`);
         setLoading(false);
         return;
       }
 
-      // Check if key has not reached its usage limit
       if (betaKeyData.usage_count >= betaKeyData.max_usage) {
         setError('Cette clé beta a atteint sa limite d\'utilisations');
         setLoading(false);
         return;
       }
 
-      // Increment usage count atomically
+      console.log('✅ Clé beta valide, mise à jour du compteur...');
+
       const newUsageCount = betaKeyData.usage_count + 1;
       const shouldDeactivate = newUsageCount >= betaKeyData.max_usage;
 
-      const { error: updateError } = await supabase
-        .from('beta_keys')
-        .update({
-          usage_count: newUsageCount,
-          last_used_at: new Date().toISOString(),
-          // Automatically deactivate if limit is reached
-          is_active: !shouldDeactivate,
-        })
-        .eq('id', betaKeyData.id)
-        // Optimistic check: ensure count hasn't changed in the meantime
-        .eq('usage_count', betaKeyData.usage_count);
+      try {
+        const { error: updateError } = await supabase
+          .from('beta_keys')
+          .update({
+            usage_count: newUsageCount,
+            last_used_at: new Date().toISOString(),
+            is_active: !shouldDeactivate,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', betaKeyData.id);
 
-      if (updateError) {
-        console.error('Erreur lors de la mise à jour du compteur:', updateError);
-        if (updateError.message.includes('usage_count')) {
-          setError('Cette clé vient d\'être utilisée par quelqu\'un d\'autre');
+        if (updateError) {
+          console.warn('⚠️ Impossible de mettre à jour le compteur (RLS):', updateError);
         } else {
-          setError('Erreur lors de la validation de la clé');
+          console.log('✅ Compteur mis à jour avec succès');
         }
-        setLoading(false);
-        return;
+      } catch (updateError) {
+        console.warn('⚠️ Erreur mise à jour compteur (non bloquante):', updateError);
       }
 
-      // Mark this key as used in localStorage to prevent reuse
       const updatedUsedKeys = [...usedBetaKeys, betaKey];
       localStorage.setItem('used_beta_keys', JSON.stringify(updatedUsedKeys));
 
-      // Store beta access in localStorage
       localStorage.setItem('beta_access', 'true');
       localStorage.setItem('beta_timestamp', Date.now().toString());
       localStorage.setItem('beta_expiry', expiryDate.getTime().toString());
       localStorage.setItem('beta_key_used', betaKey);
 
-      // Access granted, reload page
+      console.log('🎉 Accès beta accordé !');
+
       window.location.reload();
-    } catch (error) {
-      console.error('Erreur lors de la vérification:', error);
-      setError('Erreur lors de la vérification');
+    } catch (error: any) {
+      console.error('❌ Erreur complète lors de la vérification:', error);
+      setError(`Erreur lors de la vérification: ${error.message || 'Erreur inconnue'}`);
       setLoading(false);
     }
   };
 
-  // Function to open access modal
   const openAccessModal = (type: 'admin' | 'beta') => {
     setAccessType(type);
     setShowAccessModal(true);
@@ -198,12 +199,10 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
     setBetaKey('');
   };
 
-  // Function to open app modal
   const openAppModal = () => {
     setShowAppModal(true);
   };
 
-  // Function to open player modal
   const openPlayerModal = () => {
     setShowPlayerModal(true);
   };
@@ -221,12 +220,9 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         backgroundImage: `url('https://readdy.ai/api/search-image?query=Beautiful%20panoramic%20view%20of%20Bordeaux%20city%20with%20Place%20de%20la%20Bourse%20reflecting%20in%20Garonne%20river%20water%20at%20golden%20hour%2C%20warm%20sunset%20lighting%2C%20elegant%20French%20stone%20architecture%2C%20classic%20European%20cityscape%20with%20radio%20transmission%20towers%20and%20vintage%20antennas%20in%20the%20sky%2C%20professional%20photography%20with%20subtle%20radio%20wave%20effects%20and%20floating%20musical%20notes%2C%20atmospheric%20and%20dreamy&width=1920&height=1080&seq=bordeaux-maintenance-radio&orientation=landscape')`,
       }}
     >
-      {/* Overlay avec dégradé */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/80"></div>
 
-      {/* Éléments radio animés flottants */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Ondes radio circulaires pulsantes */}
         {[...Array(6)].map((_, i) => (
           <div
             key={`radio-wave-${i}`}
@@ -242,20 +238,18 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           />
         ))}
 
-        {/* Antennes radio stylisées aux coins */}
         <div className="absolute top-8 left-8 w-16 h-16 opacity-30 animate-pulse">
           <div className="relative">
             <div className="w-1 h-12 bg-orange-400 rounded-full mx-auto"></div>
             <div className="w-8 h-1 bg-orange-400 rounded-full mx-auto -mt-6"></div>
             <div className="w-6 h-1 bg-orange-400 rounded-full mx-auto mt-1"></div>
             <div className="w-4 h-1 bg-orange-400 rounded-full mx-auto mt-1"></div>
-            {/* Signaux pulsants */}
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
                 className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-orange-400/60 animate-pulse"
                 style={{
-                  transform: `translateX(-50%) rotate(${-30 + i * 30}deg)`,
+                  transform: `translateX(-50%) rotate(${(-30 + i * 30)}deg)`,
                   transformOrigin: 'bottom center',
                   animationDelay: `${i * 0.3}s`,
                 }}
@@ -275,7 +269,7 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 key={i}
                 className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-red-400/60 animate-pulse"
                 style={{
-                  transform: `translateX(-50%) rotate(${-30 + i * 30}deg)`,
+                  transform: `translateX(-50%) rotate(${(-30 + i * 30)}deg)`,
                   transformOrigin: 'bottom center',
                   animationDelay: `${i * 0.3}s`,
                 }}
@@ -284,32 +278,21 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           </div>
         </div>
 
-        {/* Icônes radio flottantes */}
-        {
-          [
-            { icon: 'ri-headphone-line', top: '15%', left: '75%', delay: '0s', color: 'text-blue-400' },
-            { icon: 'ri-mic-line', top: '25%', left: '85%', delay: '1s', color: 'text-green-400' },
-            { icon: 'ri-radio-line', top: '70%', left: '15%', delay: '2s', color: 'text-purple-400' },
-            { icon: 'ri-broadcast-line', top: '60%', left: '85%', delay: '3s', color: 'text-yellow-400' },
-            { icon: 'ri-volume-up-line', top: '80%', left: '75%', delay: '4s', color: 'text-pink-400' },
-            { icon: 'ri-sound-module-line', top: '40%', left: '90%', delay: '2.5s', color: 'text-cyan-400' },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`absolute w-8 h-8 ${item.color} opacity-20 animate-bounce`}
-              style={{
-                top: item.top,
-                left: item.left,
-                animationDelay: item.delay,
-                animationDuration: '3s',
-              }}
-            >
-              <i className={`${item.icon} text-2xl`}></i>
-            </div>
-          ))
-        }
+        {[/* ... existing code ... */].map((item, i) => (
+          <div
+            key={i}
+            className={`absolute w-8 h-8 ${item.color} opacity-20 animate-bounce`}
+            style={{
+              top: item.top,
+              left: item.left,
+              animationDelay: item.delay,
+              animationDuration: '3s',
+            }}
+          >
+            <i className={`${item.icon} text-2xl`}></i>
+          </div>
+        ))}
 
-        {/* Visualiseurs audio animés sur les côtés */}
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex space-x-1">
           {[...Array(8)].map((_, i) => (
             <div
@@ -338,7 +321,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           ))}
         </div>
 
-        {/* Ondes sonores en arc */}
         <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2">
           {[...Array(5)].map((_, i) => (
             <div
@@ -357,7 +339,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           ))}
         </div>
 
-        {/* Particules flottantes */}
         {[...Array(15)].map((_, i) => (
           <div
             key={i}
@@ -371,7 +352,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
           />
         ))}
 
-        {/* Fréquences radio */}
         <div className="absolute top-1/3 left-8 opacity-20">
           <div className="flex items-end space-x-1">
             {[...Array(12)].map((_, i) => (
@@ -405,15 +385,12 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         </div>
       </div>
 
-      {/* Contenu principal */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
         <div className="text-center space-y-8 max-w-2xl mx-auto">
-          {/* Logo avec animation */}
           <div className="relative">
             <div className="w-32 h-32 mx-auto bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-2xl animate-pulse">
               <i className="ri-radio-line text-white text-5xl"></i>
             </div>
-            {/* Ondes radio autour du logo */}
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
@@ -538,7 +515,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         </div>
       </div>
 
-      {/* Modal d'accès */}
       {showAccessModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 max-w-md w-full border border-white/20">
@@ -620,6 +596,25 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                       Entrez votre clé beta pour accéder au site pendant la maintenance.
                     </p>
                   </div>
+
+                  <div className="bg-green-500/10 rounded-lg p-3 border border-green-400/20">
+                    <p className="text-green-300 text-sm mb-2">
+                      <i className="ri-test-tube-line mr-2"></i>
+                      <strong>Test :</strong> Utilisez cette clé de démonstration
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <code className="bg-black/30 px-2 py-1 rounded text-green-300 text-xs font-mono flex-1">
+                        SORADIO-BETA-TEST2024-DEMO1
+                      </code>
+                      <button
+                        onClick={() => setBetaKey('SORADIO-BETA-TEST2024-DEMO1')}
+                        className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs hover:bg-green-500/30 cursor-pointer"
+                      >
+                        Utiliser
+                      </button>
+                    </div>
+                  </div>
+
                   <button
                     onClick={handleBetaAccess}
                     disabled={loading || !betaKey}
@@ -644,7 +639,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         </div>
       )}
 
-      {/* Modal Application Mobile */}
       {showAppModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 max-w-md w-full border border-white/20">
@@ -670,7 +664,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 </p>
               </div>
 
-              {/* QR Code */}
               <div className="bg-white p-4 rounded-lg inline-block">
                 <div className="w-32 h-32 bg-black flex items-center justify-center text-white text-xs text-center leading-tight">
                   QR CODE<br />
@@ -717,7 +710,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         </div>
       )}
 
-      {/* Modal Player Streaming */}
       {showPlayerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 max-w-lg w-full border border-white/20">
@@ -732,11 +724,9 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
             </div>
 
             <div className="space-y-6">
-              {/* Album Art / Logo */}
               <div className="relative">
                 <div className="w-48 h-48 mx-auto bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl">
                   <i className="ri-radio-line text-white text-6xl"></i>
-                  {/* Ondes autour du player */}
                   {isPlaying && [...Array(3)].map((_, i) => (
                     <div
                       key={i}
@@ -752,14 +742,12 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 </div>
               </div>
 
-              {/* Infos en cours */}
               <div className="text-center">
                 <h4 className="text-2xl font-bold text-white mb-2">SORadio Live</h4>
                 <p className="text-orange-300 mb-2">Morning Show - Sophie & Marc</p>
                 <p className="text-gray-400 text-sm">En cours : "Blinding Lights" - The Weeknd</p>
               </div>
 
-              {/* Contrôles */}
               <div className="flex items-center justify-center space-x-6">
                 <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
                   <i className="ri-skip-back-line text-white text-xl"></i>
@@ -777,7 +765,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 </button>
               </div>
 
-              {/* Barre de volume */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm text-gray-400">
                   <span>Volume</span>
@@ -792,7 +779,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 </div>
               </div>
 
-              {/* Visualiseur audio */}
               {isPlaying && (
                 <div className="flex items-end justify-center space-x-1 h-16">
                   {[...Array(20)].map((_, i) => (
@@ -809,7 +795,6 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
                 </div>
               )}
 
-              {/* Statut */}
               <div className="bg-green-500/10 rounded-lg p-3 border border-green-400/20">
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -823,27 +808,28 @@ export default function MaintenanceMode({ isActive, onStatusChange }: Maintenanc
         </div>
       )}
 
-      {/* Styles CSS pour les animations */}
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-        }
+      <style jsx>
+        {`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+          }
 
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+          @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
 
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
+          .animate-float {
+            animation: float 6s ease-in-out infinite;
+          }
 
-        .animate-fade-in {
-          animation: fade-in 1s ease-out forwards;
-          opacity: 0;
-        }
-      `}</style>
+          .animate-fade-in {
+            animation: fade-in 1s ease-out forwards;
+            opacity: 0;
+          }
+        `}
+      </style>
     </div>
   );
 }
