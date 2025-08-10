@@ -53,25 +53,35 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         if (hasTimedOut) return;
 
         // Chargement avec timeout très court et fallback immédiat
-        const maintenancePromise = supabase
-          .from('site_settings')
-          .select('value')
-          .eq('category', 'system')
-          .eq('key', 'maintenanceMode')
-          .single()
-          .then(result => ({ type: 'maintenance', result }))
-          .catch(error => ({ type: 'maintenance', error }));
+        const maintenanceQuery = async () => {
+          try {
+            const result = await supabase
+              .from('site_settings')
+              .select('value')
+              .eq('category', 'system')
+              .eq('key', 'maintenanceMode')
+              .single();
+            return { type: 'maintenance', result };
+          } catch (error) {
+            return { type: 'maintenance', error };
+          }
+        };
 
-        const sessionPromise = supabase.auth.getSession()
-          .then(result => ({ type: 'session', result }))
-          .catch(error => ({ type: 'session', error }));
+        const sessionQuery = async () => {
+          try {
+            const result = await supabase.auth.getSession();
+            return { type: 'session', result };
+          } catch (error) {
+            return { type: 'session', error };
+          }
+        };
 
         // Attendre les deux requêtes avec timeout TRÈS COURT
         const results = await Promise.allSettled([
-          Promise.race([maintenancePromise, new Promise((_, reject) => 
+          Promise.race([maintenanceQuery(), new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Timeout maintenance')), 2000) // 2 secondes max
           )]),
-          Promise.race([sessionPromise, new Promise((_, reject) => 
+          Promise.race([sessionQuery(), new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Timeout session')), 3000) // 3 secondes max
           )])
         ]);
@@ -105,21 +115,28 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
             // Vérifier le profil admin avec timeout TRÈS COURT
             try {
-              const profilePromise = supabase
-                .from('profiles')
-                .select('is_admin')
-                .eq('id', user.id)
-                .single();
+              const profileQuery = async () => {
+                try {
+                  const result = await supabase
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                  return result;
+                } catch (error) {
+                  throw error;
+                }
+              };
 
               const profileResult = await Promise.race([
-                profilePromise,
+                profileQuery(),
                 new Promise((_, reject) => 
                   setTimeout(() => reject(new Error('Timeout profile')), 2000) // 2 secondes max
                 )
               ]);
 
-              if (!hasTimedOut && profileResult && !profileResult.error) {
-                setIsAdmin(profileResult.data?.is_admin || false);
+              if (!hasTimedOut && profileResult && !(profileResult as any).error) {
+                setIsAdmin((profileResult as any).data?.is_admin || false);
               } else {
                 console.warn('Profile check failed or timed out, defaulting admin to false');
                 setIsAdmin(false);
